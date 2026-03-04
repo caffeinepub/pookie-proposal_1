@@ -1,0 +1,306 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 1.5rem;
+
+    /* Pookie Romantic Palette — soft pink dreamy */
+    --background: 0.98 0.015 350;
+    --foreground: 0.28 0.06 340;
+
+    --card: 1 0.01 340;
+    --card-foreground: 0.28 0.06 340;
+
+    --popover: 1 0.01 340;
+    --popover-foreground: 0.28 0.06 340;
+
+    /* Hot pink primary */
+    --primary: 0.62 0.22 0;
+    --primary-foreground: 1 0 0;
+
+    /* Lavender secondary */
+    --secondary: 0.92 0.04 295;
+    --secondary-foreground: 0.35 0.1 295;
+
+    --muted: 0.95 0.02 350;
+    --muted-foreground: 0.56 0.06 340;
+
+    /* Gold accent */
+    --accent: 0.82 0.12 80;
+    --accent-foreground: 0.3 0.08 60;
+
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+
+    --border: 0.88 0.04 350;
+    --input: 0.92 0.03 350;
+    --ring: 0.62 0.22 0;
+
+    /* Chart colors */
+    --chart-1: 0.62 0.22 0;
+    --chart-2: 0.72 0.18 320;
+    --chart-3: 0.78 0.14 295;
+    --chart-4: 0.82 0.12 80;
+    --chart-5: 0.68 0.2 15;
+
+    --sidebar: 0.98 0.015 350;
+    --sidebar-foreground: 0.28 0.06 340;
+    --sidebar-primary: 0.62 0.22 0;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.92 0.04 295;
+    --sidebar-accent-foreground: 0.35 0.1 295;
+    --sidebar-border: 0.88 0.04 350;
+    --sidebar-ring: 0.62 0.22 0;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Nunito', 'Georgia', 'Palatino', sans-serif;
+  }
+}
+
+/* ─── Floating Hearts Background ─── */
+@keyframes floatHeart {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-40vh) rotate(15deg) scale(1.1);
+  }
+  100% {
+    transform: translateY(-100vh) rotate(-10deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes floatHeartSway {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0.6; }
+  25% { transform: translateY(-25vh) translateX(15px) rotate(10deg); opacity: 0.9; }
+  50% { transform: translateY(-50vh) translateX(-10px) rotate(-5deg); opacity: 0.8; }
+  75% { transform: translateY(-75vh) translateX(20px) rotate(15deg); opacity: 0.5; }
+  100% { transform: translateY(-100vh) translateX(0) rotate(-10deg); opacity: 0; }
+}
+
+.floating-heart {
+  position: fixed;
+  pointer-events: none;
+  animation: floatHeartSway linear infinite;
+  user-select: none;
+  z-index: 0;
+}
+
+/* ─── Page Fade In ─── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* ─── Glow Pulse ─── */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px 5px oklch(0.62 0.22 0 / 0.4),
+                0 0 40px 10px oklch(0.72 0.18 320 / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px 10px oklch(0.62 0.22 0 / 0.6),
+                0 0 60px 20px oklch(0.72 0.18 320 / 0.35);
+  }
+}
+
+.glow-btn {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* ─── Sparkle ─── */
+@keyframes sparkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  25% { transform: scale(1.3) rotate(15deg); opacity: 0.8; }
+  50% { transform: scale(0.9) rotate(-10deg); opacity: 1; }
+  75% { transform: scale(1.2) rotate(20deg); opacity: 0.9; }
+}
+
+.sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+/* ─── Bouncy ─── */
+@keyframes bounce-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+/* ─── Confetti Rain ─── */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  position: fixed;
+  top: -10vh;
+  pointer-events: none;
+  animation: confettiFall linear infinite;
+  z-index: 50;
+  user-select: none;
+}
+
+/* ─── Heart Sway Decorative ─── */
+@keyframes sway {
+  0%, 100% { transform: rotate(-5deg) scale(1); }
+  50% { transform: rotate(5deg) scale(1.05); }
+}
+
+.sway {
+  animation: sway 3s ease-in-out infinite;
+}
+
+/* ─── Ring Spin ─── */
+@keyframes ringFloat {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
+}
+
+.ring-float {
+  animation: ringFloat 3s ease-in-out infinite;
+}
+
+/* ─── Stagger delays ─── */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-1000 { animation-delay: 1s; }
+
+/* ─── Dreamy text gradient ─── */
+.text-gradient-pink {
+  background: linear-gradient(135deg, oklch(0.62 0.22 0), oklch(0.72 0.18 320), oklch(0.82 0.12 80));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Pookie card ─── */
+.pookie-card {
+  background: linear-gradient(135deg,
+    oklch(1 0.01 340 / 0.9),
+    oklch(0.95 0.03 320 / 0.85)
+  );
+  backdrop-filter: blur(12px);
+  border: 1.5px solid oklch(0.88 0.06 340 / 0.6);
+  border-radius: 2rem;
+  box-shadow:
+    0 4px 24px oklch(0.62 0.22 0 / 0.12),
+    0 1px 4px oklch(0.72 0.18 320 / 0.1);
+}
+
+/* ─── Bouquet preview ─── */
+.bouquet-preview {
+  background: linear-gradient(135deg,
+    oklch(0.96 0.04 340 / 0.8),
+    oklch(0.93 0.05 295 / 0.7)
+  );
+  border: 2px dashed oklch(0.75 0.15 340 / 0.5);
+  border-radius: 2rem;
+}
+
+/* ─── Pill button base ─── */
+.btn-pookie {
+  border-radius: 9999px;
+  padding: 0.75rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: linear-gradient(135deg, oklch(0.62 0.22 0), oklch(0.7 0.2 320));
+  color: white;
+  border: none;
+  outline: none;
+  letter-spacing: 0.02em;
+}
+
+.btn-pookie:hover {
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 8px 30px oklch(0.62 0.22 0 / 0.4);
+}
+
+/* ─── Reveal animation ─── */
+@keyframes revealMessage {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.reveal-message {
+  animation: revealMessage 1.2s ease-out forwards;
+}
+
+/* ─── Yes button throb ─── */
+@keyframes yesThrobPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+.yes-throb {
+  animation: yesThrobPulse 1.5s ease-in-out infinite, glowPulse 2s ease-in-out infinite;
+}
+
+/* ─── Celebration rain hearts ─── */
+@keyframes heartRain {
+  0% { transform: translateY(-5vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0.3; }
+}
+
+.heart-rain {
+  position: fixed;
+  pointer-events: none;
+  animation: heartRain linear infinite;
+  z-index: 5;
+}
