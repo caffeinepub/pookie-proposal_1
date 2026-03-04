@@ -11,13 +11,42 @@ import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
 export interface Bouquet { 'timestamp' : Time, 'flowers' : Array<string> }
-export interface ProposalResponse { 'timestamp' : Time, 'accepted' : boolean }
+export interface Letter {
+  'id' : bigint,
+  'content' : string,
+  'author' : string,
+  'timestamp' : Time,
+}
+export interface Note {
+  'id' : bigint,
+  'imageData' : string,
+  'author' : string,
+  'timestamp' : Time,
+  'caption' : string,
+}
 export type Time = bigint;
+export interface WeddingCertificate {
+  'weddingDate' : string,
+  'bishalSigned' : boolean,
+  'bishalSignedAt' : [] | [Time],
+  'aasthaSignedAt' : [] | [Time],
+  'aasthaSigned' : boolean,
+}
 export interface _SERVICE {
-  'getBouquet' : ActorMethod<[], Bouquet>,
-  'getProposalResponse' : ActorMethod<[], [] | [ProposalResponse]>,
-  'saveBouquet' : ActorMethod<[Array<string>], undefined>,
-  'saveProposalResponse' : ActorMethod<[boolean], undefined>,
+  'addFlowersForAastha' : ActorMethod<[Array<string>], undefined>,
+  'addFlowersForBishal' : ActorMethod<[Array<string>], undefined>,
+  'addHandwrittenNote' : ActorMethod<[string, string, string], bigint>,
+  'addLetter' : ActorMethod<[string, string], bigint>,
+  'deleteHandwrittenNote' : ActorMethod<[bigint], boolean>,
+  'deleteLetter' : ActorMethod<[bigint], boolean>,
+  'getAllHandwrittenNotes' : ActorMethod<[], Array<Note>>,
+  'getAllLetters' : ActorMethod<[], Array<Letter>>,
+  'getBouquetForAastha' : ActorMethod<[], Bouquet>,
+  'getBouquetForBishal' : ActorMethod<[], Bouquet>,
+  'getWeddingCertificate' : ActorMethod<[], WeddingCertificate>,
+  'setWeddingDate' : ActorMethod<[string], undefined>,
+  'signWeddingCertificateAsAastha' : ActorMethod<[], undefined>,
+  'signWeddingCertificateAsBishal' : ActorMethod<[], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

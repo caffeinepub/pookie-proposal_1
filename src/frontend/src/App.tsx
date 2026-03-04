@@ -1,8 +1,25 @@
+import { Toaster } from "@/components/ui/sonner";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSaveBouquet, useSaveProposalResponse } from "./hooks/useQueries";
+import { toast } from "sonner";
+import {
+  useAddFlowersForAastha,
+  useAddFlowersForBishal,
+  useAddHandwrittenNote,
+  useAddLetter,
+  useDeleteHandwrittenNote,
+  useDeleteLetter,
+  useGetAllHandwrittenNotes,
+  useGetAllLetters,
+  useGetBouquetForAastha,
+  useGetBouquetForBishal,
+  useGetWeddingCertificate,
+  useSetWeddingDate,
+  useSignWeddingCertificateAsAastha,
+  useSignWeddingCertificateAsBishal,
+} from "./hooks/useQueries";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type Step = 0 | 1 | 2 | 3 | 4;
+// ─── Types ─────────────────────────────────────────────────────────────────────
+type Tab = "home" | "bouquet" | "letters" | "notes" | "certificate";
 
 interface FloatingHeart {
   id: number;
@@ -22,7 +39,7 @@ interface ConfettiPiece {
   delay: number;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────────
 const HEART_EMOJIS = [
   "💖",
   "💕",
@@ -31,9 +48,9 @@ const HEART_EMOJIS = [
   "💞",
   "🌸",
   "✨",
-  "⭐",
   "💫",
   "🌺",
+  "🩷",
 ];
 const CONFETTI_EMOJIS = [
   "💖",
@@ -49,7 +66,6 @@ const CONFETTI_EMOJIS = [
   "🥂",
   "💗",
 ];
-
 const FLOWERS = [
   { emoji: "🌹", name: "Rose" },
   { emoji: "🌻", name: "Sunflower" },
@@ -61,20 +77,41 @@ const FLOWERS = [
   { emoji: "🍀", name: "Clover" },
   { emoji: "🌿", name: "Greenery" },
 ];
+const PEN_COLORS = [
+  "#1a1a2e",
+  "#e91e8c",
+  "#7c3aed",
+  "#0ea5e9",
+  "#16a34a",
+  "#f59e0b",
+  "#ef4444",
+];
 
-// ─── Floating Hearts Background ───────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+function formatTimestamp(nanoseconds: bigint): string {
+  const ms = Number(nanoseconds / 1_000_000n);
+  const date = new Date(ms);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// ─── FloatingHeartsBackground ──────────────────────────────────────────────────
 function FloatingHeartsBackground({ count = 12 }: { count?: number }) {
   const [hearts] = useState<FloatingHeart[]>(() =>
     Array.from({ length: count }, (_, i) => ({
       id: i,
       emoji: HEART_EMOJIS[i % HEART_EMOJIS.length],
-      left: (i / count) * 100 + Math.random() * (100 / count),
-      size: 1.2 + (i % 5) * 0.4,
+      left: (i / count) * 100 + (i % 3) * 5,
+      size: 1.2 + (i % 5) * 0.35,
       duration: 8 + (i % 7) * 1.5,
       delay: (i % 9) * 0.9,
     })),
   );
-
   return (
     <div className="pointer-events-none" aria-hidden="true">
       {hearts.map((h) => (
@@ -96,19 +133,18 @@ function FloatingHeartsBackground({ count = 12 }: { count?: number }) {
   );
 }
 
-// ─── Confetti Rain ─────────────────────────────────────────────────────────────
+// ─── ConfettiRain ──────────────────────────────────────────────────────────────
 function ConfettiRain({ count = 30 }: { count?: number }) {
   const [pieces] = useState<ConfettiPiece[]>(() =>
     Array.from({ length: count }, (_, i) => ({
       id: i,
       emoji: CONFETTI_EMOJIS[i % CONFETTI_EMOJIS.length],
-      left: (i / count) * 100 + Math.random() * (100 / count),
+      left: (i / count) * 100 + (i % 4) * 3,
       size: 1.2 + (i % 4) * 0.5,
       duration: 4 + (i % 6) * 0.8,
       delay: (i % 8) * 0.75,
     })),
   );
-
   return (
     <div className="pointer-events-none" aria-hidden="true">
       {pieces.map((p) => (
@@ -129,165 +165,274 @@ function ConfettiRain({ count = 30 }: { count?: number }) {
   );
 }
 
-// ─── Step 0: Welcome Page ──────────────────────────────────────────────────────
-function WelcomePage({ onNext }: { onNext: () => void }) {
+// ─── LoveTimer ────────────────────────────────────────────────────────────────
+const TOGETHER_SINCE = new Date("2025-05-21T00:00:00");
+
+function useLoveTimer() {
+  const [elapsed, setElapsed] = useState(() => {
+    const now = new Date();
+    return now.getTime() - TOGETHER_SINCE.getTime();
+  });
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setElapsed(new Date().getTime() - TOGETHER_SINCE.getTime());
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const totalSeconds = Math.floor(elapsed / 1000);
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const totalHours = Math.floor(totalMinutes / 60);
+  const hours = totalHours % 24;
+  const totalDays = Math.floor(totalHours / 24);
+  const years = Math.floor(totalDays / 365);
+  const months = Math.floor((totalDays % 365) / 30);
+  const days = totalDays % 30;
+
+  return { years, months, days, hours, minutes, seconds };
+}
+
+// ─── HomeSection ──────────────────────────────────────────────────────────────
+function HomeSection() {
+  const { years, months, days, hours, minutes, seconds } = useLoveTimer();
+
+  const units = [
+    { label: "Years", value: years },
+    { label: "Months", value: months },
+    { label: "Days", value: days },
+    { label: "Hours", value: hours },
+    { label: "Minutes", value: minutes },
+    { label: "Seconds", value: seconds },
+  ];
+
   return (
-    <div
-      className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden"
+    <section
+      data-ocid="timer.section"
+      className="relative min-h-full flex flex-col items-center justify-start px-4 py-8 pb-28 overflow-hidden"
       style={{
         background:
-          "linear-gradient(135deg, oklch(0.97 0.03 350) 0%, oklch(0.93 0.05 320) 50%, oklch(0.95 0.04 295) 100%)",
+          "linear-gradient(155deg, oklch(0.98 0.02 350) 0%, oklch(0.94 0.05 320) 40%, oklch(0.96 0.03 295) 100%)",
       }}
     >
-      {/* Background romantic image */}
-      <div
-        className="absolute inset-0 opacity-20 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('/assets/generated/romantic-bg.dim_1920x1080.jpg')",
-        }}
-        aria-hidden="true"
-      />
+      <FloatingHeartsBackground count={14} />
 
-      <FloatingHeartsBackground count={16} />
-
-      <div className="relative z-10 text-center max-w-lg mx-auto">
-        {/* Top sparkles */}
-        <div className="flex justify-center gap-4 mb-6 text-3xl fade-in">
-          <span className="sparkle delay-100">✨</span>
-          <span className="sparkle delay-300">💫</span>
-          <span className="sparkle delay-500">⭐</span>
+      <div className="relative z-10 w-full max-w-2xl mx-auto">
+        {/* Sparkles header */}
+        <div className="flex justify-center gap-3 mb-4 text-2xl">
+          <span className="sparkle">✨</span>
           <span className="sparkle delay-200">💫</span>
-          <span className="sparkle delay-400">✨</span>
+          <span className="sparkle delay-400">⭐</span>
+          <span className="sparkle delay-100">💫</span>
+          <span className="sparkle delay-300">✨</span>
         </div>
 
-        {/* Main title */}
+        {/* Main heading */}
         <h1
-          className="fade-in-up text-5xl md:text-7xl font-bold mb-4 leading-tight"
+          className="fade-in-up text-center text-5xl md:text-6xl font-bold mb-2 leading-tight"
           style={{
             fontFamily: "'Pacifico', Georgia, cursive",
             background:
-              "linear-gradient(135deg, oklch(0.55 0.22 0), oklch(0.65 0.2 320), oklch(0.78 0.16 295))",
+              "linear-gradient(135deg, oklch(0.55 0.22 0), oklch(0.65 0.2 320), oklch(0.72 0.14 295))",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
           }}
         >
-          Hey Aastha 🌸
+          Bishal &amp; Aastha
         </h1>
+        <div className="text-center text-3xl mb-1 sparkle">💖</div>
 
-        {/* Subtitle */}
         <p
-          className="fade-in-up delay-300 text-xl md:text-2xl mb-3"
+          className="text-center text-lg mb-6 fade-in-up"
           style={{
             fontFamily: "'Nunito', Georgia, sans-serif",
             fontStyle: "italic",
-            color: "oklch(0.5 0.12 330)",
-            opacity: 0,
+            color: "oklch(0.52 0.12 330)",
+            animationDelay: "0.2s",
           }}
         >
-          I made something special, just for you 💖
+          Together since 21st May 2025 🌸
         </p>
 
-        <p
-          className="fade-in-up delay-500 text-base md:text-lg mb-10"
-          style={{
-            fontFamily: "'Nunito', Georgia, sans-serif",
-            color: "oklch(0.55 0.08 330)",
-            opacity: 0,
-          }}
-        >
-          Take a deep breath, relax, and let the magic begin ✨🐻💕
-        </p>
-
-        {/* Bear emoji */}
+        {/* Couple card */}
         <div
-          className="bounce-gentle text-6xl mb-8"
-          style={{ animationDelay: "0.5s" }}
+          className="pookie-card p-6 mb-7 text-center fade-in-up"
+          style={{ animationDelay: "0.3s" }}
         >
-          🐻
+          <div className="flex items-center justify-center gap-4 mb-3">
+            <div className="text-center">
+              <div className="text-4xl mb-1">🐻</div>
+              <p
+                className="text-base font-bold"
+                style={{
+                  fontFamily: "'Pacifico', Georgia, cursive",
+                  color: "oklch(0.55 0.22 0)",
+                }}
+              >
+                Bishal
+              </p>
+            </div>
+            <div className="text-3xl bounce-gentle">💖</div>
+            <div className="text-center">
+              <div className="text-4xl mb-1">🌸</div>
+              <p
+                className="text-base font-bold"
+                style={{
+                  fontFamily: "'Pacifico', Georgia, cursive",
+                  color: "oklch(0.65 0.2 320)",
+                }}
+              >
+                Aastha
+              </p>
+            </div>
+          </div>
+          <p
+            className="text-sm"
+            style={{
+              fontFamily: "'Nunito', Georgia, sans-serif",
+              color: "oklch(0.56 0.1 330)",
+              fontStyle: "italic",
+            }}
+          >
+            Every moment with you is my favourite 💕
+          </p>
         </div>
 
-        {/* Begin button */}
-        <button
-          type="button"
-          data-ocid="welcome.primary_button"
-          onClick={onNext}
-          className="btn-pookie glow-btn fade-in delay-700 text-white font-bold text-lg px-10 py-4"
-          style={{
-            opacity: 0,
-            background:
-              "linear-gradient(135deg, oklch(0.62 0.22 0), oklch(0.7 0.2 320), oklch(0.78 0.16 295))",
-          }}
-        >
-          Begin 💝
-        </button>
-
-        {/* Bottom emoji row */}
+        {/* Love Timer */}
         <div
-          className="mt-10 flex justify-center gap-3 text-2xl fade-in delay-1000"
-          style={{ opacity: 0 }}
+          className="pookie-card p-6 fade-in-up"
+          style={{ animationDelay: "0.45s" }}
         >
+          <h2
+            className="text-center text-2xl font-bold mb-5"
+            style={{
+              fontFamily: "'Pacifico', Georgia, cursive",
+              background:
+                "linear-gradient(135deg, oklch(0.55 0.22 0), oklch(0.72 0.18 295))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            Our Love Timer ⏰💕
+          </h2>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+            {units.map(({ label, value }) => (
+              <div
+                key={label}
+                className="flex flex-col items-center justify-center rounded-2xl py-3 px-1"
+                style={{
+                  background:
+                    "linear-gradient(135deg, oklch(0.96 0.04 340 / 0.8), oklch(0.93 0.05 295 / 0.6))",
+                  border: "1.5px solid oklch(0.85 0.08 340 / 0.4)",
+                }}
+              >
+                <span
+                  className="text-2xl sm:text-3xl font-black tabular-nums leading-none"
+                  style={{
+                    fontFamily: "'Nunito', Georgia, sans-serif",
+                    background:
+                      "linear-gradient(135deg, oklch(0.52 0.22 0), oklch(0.68 0.2 320))",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  {String(value).padStart(2, "0")}
+                </span>
+                <span
+                  className="text-xs mt-1 font-semibold"
+                  style={{
+                    color: "oklch(0.6 0.1 330)",
+                    fontFamily: "'Nunito', Georgia, sans-serif",
+                  }}
+                >
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p
+            className="text-center text-sm mt-4"
+            style={{
+              color: "oklch(0.62 0.1 330)",
+              fontFamily: "'Nunito', Georgia, sans-serif",
+              fontStyle: "italic",
+            }}
+          >
+            ...and counting forever 🌟
+          </p>
+        </div>
+
+        {/* Emoji row */}
+        <div className="flex justify-center gap-3 text-2xl mt-6">
           <span>🌹</span>
-          <span>💖</span>
+          <span className="sparkle">💖</span>
           <span>🌷</span>
-          <span>💕</span>
+          <span className="sparkle delay-300">💕</span>
           <span>🌸</span>
-          <span>💗</span>
+          <span className="sparkle delay-200">💗</span>
           <span>🌺</span>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-// ─── Step 1: Bouquet Builder ───────────────────────────────────────────────────
-function BouquetBuilder({
-  onNext,
-  bouquet,
-  setBouquet,
-}: {
-  onNext: () => void;
-  bouquet: string[];
-  setBouquet: (b: string[]) => void;
-}) {
-  const saveBouquetMutation = useSaveBouquet();
+// ─── BouquetSection ───────────────────────────────────────────────────────────
+function BouquetSection() {
+  const { data: bouquetAastha } = useGetBouquetForAastha();
+  const { data: bouquetBishal } = useGetBouquetForBishal();
+  const addForAastha = useAddFlowersForAastha();
+  const addForBishal = useAddFlowersForBishal();
 
-  const addFlower = (emoji: string) => {
-    setBouquet([...bouquet, emoji]);
-  };
+  const [bishalPicks, setBishalPicks] = useState<string[]>([]);
+  const [aasthaPicks, setAasthaPicks] = useState<string[]>([]);
 
-  const removeFlower = (index: number) => {
-    const next = [...bouquet];
-    next.splice(index, 1);
-    setBouquet(next);
-  };
+  // Load existing bouquets into local state
+  useEffect(() => {
+    if (bouquetAastha?.flowers?.length) setBishalPicks(bouquetAastha.flowers);
+  }, [bouquetAastha]);
 
-  const handleNext = async () => {
+  useEffect(() => {
+    if (bouquetBishal?.flowers?.length) setAasthaPicks(bouquetBishal.flowers);
+  }, [bouquetBishal]);
+
+  const handleSaveBishal = async () => {
     try {
-      await saveBouquetMutation.mutateAsync(bouquet);
-    } catch (e) {
-      console.error("Failed to save bouquet", e);
+      await addForAastha.mutateAsync(bishalPicks);
+      toast.success("Bishal's bouquet saved for Aastha! 🌹");
+    } catch {
+      toast.error("Failed to save bouquet 😢");
     }
-    onNext();
+  };
+
+  const handleSaveAastha = async () => {
+    try {
+      await addForBishal.mutateAsync(aasthaPicks);
+      toast.success("Aastha's bouquet saved for Bishal! 🌻");
+    } catch {
+      toast.error("Failed to save bouquet 😢");
+    }
   };
 
   return (
-    <div
-      className="relative min-h-screen flex flex-col items-center justify-start pt-8 pb-16 px-6 overflow-hidden"
+    <section
+      className="min-h-full px-4 py-8 pb-28 overflow-auto"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.97 0.025 350) 0%, oklch(0.94 0.04 330) 50%, oklch(0.96 0.03 295) 100%)",
+          "linear-gradient(155deg, oklch(0.97 0.025 350) 0%, oklch(0.93 0.05 330) 50%, oklch(0.96 0.03 295) 100%)",
       }}
     >
-      <FloatingHeartsBackground count={10} />
-
-      <div className="relative z-10 w-full max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8 fade-in-up">
+      <FloatingHeartsBackground count={8} />
+      <div className="relative z-10 max-w-2xl mx-auto">
+        <div className="text-center mb-6 fade-in-up">
           <div className="text-3xl mb-2">💐✨💐</div>
           <h2
-            className="text-4xl md:text-5xl font-bold mb-2"
+            className="text-4xl font-bold mb-1"
             style={{
               fontFamily: "'Pacifico', Georgia, cursive",
               background:
@@ -297,663 +442,1381 @@ function BouquetBuilder({
               backgroundClip: "text",
             }}
           >
-            Aastha&apos;s Bouquet 🌸
+            Build a Bouquet 💐
           </h2>
           <p
-            className="text-lg"
             style={{
               fontFamily: "'Nunito', Georgia, sans-serif",
-              fontStyle: "italic",
               color: "oklch(0.55 0.1 330)",
+              fontStyle: "italic",
             }}
           >
-            Pick your favourite flowers, Aastha 🌷💕
+            Pick flowers and surprise each other 🌸
           </p>
         </div>
 
-        {/* Bouquet Preview */}
-        <div className="bouquet-preview p-6 mb-8 min-h-[140px] fade-in-up delay-200">
-          <p
-            className="text-sm font-semibold mb-3 text-center"
-            style={{ color: "oklch(0.6 0.12 330)" }}
-          >
-            🌿 Your Bouquet ({bouquet.length} flowers) 🌿
-          </p>
-          {bouquet.length === 0 ? (
-            <div
-              className="text-center text-3xl opacity-40"
-              data-ocid="bouquet.empty_state"
+        {/* Two bouquet builders */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Bishal's bouquet for Aastha */}
+          <div className="pookie-card p-5">
+            <h3
+              className="text-lg font-bold text-center mb-3"
+              style={{
+                fontFamily: "'Pacifico', Georgia, cursive",
+                background:
+                  "linear-gradient(135deg, oklch(0.55 0.22 0), oklch(0.7 0.2 320))",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
             >
-              <p
-                className="text-sm mb-2"
-                style={{ color: "oklch(0.65 0.08 330)", fontSize: "0.9rem" }}
-              >
-                Click flowers below to build your bouquet! 👇
-              </p>
-              <span>🌱</span>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2 justify-center">
-              {bouquet.map((flower, index) => (
-                <button
-                  // biome-ignore lint/suspicious/noArrayIndexKey: bouquet items can repeat same emoji
-                  key={`${flower}-${index}`}
-                  type="button"
-                  onClick={() => removeFlower(index)}
-                  title="Click to remove"
-                  className="text-3xl rounded-full transition-all duration-200 hover:scale-125 hover:opacity-70"
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "4px",
-                  }}
+              Bishal's for Aastha 🌹
+            </h3>
+            {/* Preview */}
+            <div className="bouquet-preview p-3 mb-3 min-h-[80px] flex flex-wrap gap-1 items-center justify-center">
+              {bishalPicks.length === 0 ? (
+                <p
+                  className="text-sm"
+                  style={{ color: "oklch(0.65 0.08 330)", fontStyle: "italic" }}
                 >
-                  {flower}
+                  Pick flowers below 👇
+                </p>
+              ) : (
+                bishalPicks.map((f, i) => (
+                  <button
+                    // biome-ignore lint/suspicious/noArrayIndexKey: bouquet items can repeat
+                    key={`bp-${f}-${i}`}
+                    type="button"
+                    onClick={() =>
+                      setBishalPicks((prev) =>
+                        prev.filter((_, idx) => idx !== i),
+                      )
+                    }
+                    className="text-2xl hover:opacity-60 transition-opacity"
+                    title="Remove"
+                  >
+                    {f}
+                  </button>
+                ))
+              )}
+            </div>
+            {/* Flower grid */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {FLOWERS.map((fl) => (
+                <button
+                  type="button"
+                  key={fl.emoji}
+                  onClick={() => setBishalPicks((prev) => [...prev, fl.emoji])}
+                  className="pookie-card p-2 text-center hover:scale-105 transition-transform cursor-pointer border-0"
+                >
+                  <span className="text-2xl block">{fl.emoji}</span>
+                  <span
+                    className="text-xs"
+                    style={{
+                      color: "oklch(0.55 0.1 330)",
+                      fontFamily: "'Nunito', Georgia, sans-serif",
+                    }}
+                  >
+                    {fl.name}
+                  </span>
                 </button>
               ))}
             </div>
-          )}
-        </div>
-
-        {/* Flower Grid */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          {FLOWERS.map((flower, index) => {
-            const ocidKeys = [
-              "bouquet.item.1",
-              "bouquet.item.2",
-              "bouquet.item.3",
-              "bouquet.item.4",
-              "bouquet.item.5",
-              "bouquet.item.6",
-              "bouquet.item.7",
-              "bouquet.item.8",
-              "bouquet.item.9",
-            ] as const;
-            return (
-              <button
-                type="button"
-                key={flower.emoji}
-                data-ocid={ocidKeys[index]}
-                onClick={() => addFlower(flower.emoji)}
-                className="pookie-card p-4 text-center transition-all duration-200 hover:scale-105 hover:-translate-y-1 active:scale-95 fade-in-up"
-                style={{
-                  animationDelay: `${0.1 * index}s`,
-                  cursor: "pointer",
-                  border: "none",
-                  opacity: 0,
-                }}
-              >
-                <span className="text-4xl block mb-1">{flower.emoji}</span>
-                <span
-                  className="text-xs font-semibold"
-                  style={{ color: "oklch(0.55 0.12 330)" }}
-                >
-                  {flower.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Next button */}
-        <div
-          className="text-center fade-in-up delay-500"
-          style={{ opacity: 0 }}
-        >
-          {bouquet.length === 0 && (
-            <p
-              className="text-sm mb-4"
-              style={{ color: "oklch(0.62 0.1 330)", fontStyle: "italic" }}
-            >
-              Add at least one flower first! 🌸
-            </p>
-          )}
-          <button
-            type="button"
-            data-ocid="bouquet.primary_button"
-            onClick={handleNext}
-            disabled={bouquet.length === 0 || saveBouquetMutation.isPending}
-            className="btn-pookie text-white font-bold text-lg"
-            style={{
-              opacity: bouquet.length === 0 ? 0.5 : 1,
-              cursor: bouquet.length === 0 ? "not-allowed" : "pointer",
-              background:
-                "linear-gradient(135deg, oklch(0.62 0.22 0), oklch(0.7 0.2 320))",
-            }}
-          >
-            {saveBouquetMutation.isPending ? "Saving... 💾" : "Next 💌"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Step 2: Proposal Message ──────────────────────────────────────────────────
-function ProposalMessagePage({ onNext }: { onNext: () => void }) {
-  const [revealed, setRevealed] = useState(false);
-  const [showButton, setShowButton] = useState(false);
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setRevealed(true), 1200);
-    const t2 = setTimeout(() => setShowButton(true), 3000);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
-
-  return (
-    <div
-      className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(135deg, oklch(0.96 0.03 320) 0%, oklch(0.93 0.05 340) 50%, oklch(0.97 0.03 295) 100%)",
-      }}
-    >
-      <FloatingHeartsBackground count={14} />
-
-      <div className="relative z-10 text-center max-w-2xl mx-auto">
-        <div className="text-4xl mb-6 sparkle">💌</div>
-
-        <h2
-          className="text-3xl md:text-5xl font-bold mb-8 fade-in-up"
-          style={{
-            fontFamily: "'Pacifico', Georgia, cursive",
-            background:
-              "linear-gradient(135deg, oklch(0.55 0.22 0), oklch(0.7 0.18 295))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          A Message From My Heart 💖
-        </h2>
-
-        <div
-          className="pookie-card p-8 md:p-12 text-left"
-          style={{
-            opacity: revealed ? 1 : 0,
-            transition: "opacity 1s ease-in-out",
-          }}
-        >
-          {revealed && (
-            <div className="reveal-message space-y-5">
-              <p
-                className="text-xl md:text-2xl leading-relaxed"
-                style={{
-                  fontFamily: "'Nunito', Georgia, sans-serif",
-                  fontStyle: "italic",
-                  color: "oklch(0.35 0.1 330)",
-                }}
-              >
-                My dearest Aastha, my sweetest, my most favourite person in the
-                entire world... 🌍💕
-              </p>
-              <p
-                className="text-lg md:text-xl leading-relaxed"
-                style={{
-                  fontFamily: "'Nunito', Georgia, sans-serif",
-                  color: "oklch(0.4 0.1 330)",
-                }}
-              >
-                For 9 magical months, you&apos;ve made every single day
-                brighter, Aastha. 🌸 You are my sunshine when the sky is grey,
-                my laughter in the quiet moments, and the warmest hug at the end
-                of every day. 🌻
-              </p>
-              <p
-                className="text-lg md:text-xl leading-relaxed"
-                style={{
-                  fontFamily: "'Nunito', Georgia, sans-serif",
-                  color: "oklch(0.4 0.1 330)",
-                }}
-              >
-                In these 9 months, I&apos;ve fallen more in love with you every
-                single day. 🐻💗 I love the way you smile, the way you care, the
-                way you make everything so much brighter just by being you. ✨
-              </p>
-              <p
-                className="text-xl md:text-2xl font-semibold leading-relaxed"
-                style={{
-                  fontFamily: "'Nunito', Georgia, sans-serif",
-                  fontStyle: "italic",
-                  color: "oklch(0.5 0.18 340)",
-                }}
-              >
-                You are my sunshine, my everything, my pookie bear, Aastha...
-                🐻💕
-              </p>
-
-              <div className="flex justify-center gap-3 text-3xl pt-2">
-                <span className="sparkle">💖</span>
-                <span className="sparkle delay-200">💕</span>
-                <span className="sparkle delay-400">💗</span>
-                <span className="sparkle delay-100">💓</span>
-                <span className="sparkle delay-300">💞</span>
-              </div>
-
-              <p
-                className="text-xl md:text-2xl font-bold text-center pt-2"
-                style={{
-                  fontFamily: "'Nunito', Georgia, sans-serif",
-                  color: "oklch(0.5 0.2 340)",
-                }}
-              >
-                Will you make me the happiest person in the world, Aastha? 🌟
-              </p>
-            </div>
-          )}
-
-          {!revealed && (
-            <div className="text-center py-12">
-              <span className="text-5xl sparkle">💌</span>
-              <p
-                className="mt-4"
-                style={{
-                  fontFamily: "'Nunito', Georgia, sans-serif",
-                  color: "oklch(0.6 0.1 330)",
-                }}
-              >
-                Opening your letter, Aastha...
-              </p>
-            </div>
-          )}
-        </div>
-
-        {showButton && (
-          <div className="mt-10 fade-in">
             <button
               type="button"
-              onClick={onNext}
-              className="btn-pookie glow-btn text-white font-bold text-lg"
-              style={{
-                background:
-                  "linear-gradient(135deg, oklch(0.62 0.22 0), oklch(0.7 0.2 320), oklch(0.78 0.16 295))",
-              }}
+              data-ocid="bouquet.bishal.primary_button"
+              onClick={handleSaveBishal}
+              disabled={bishalPicks.length === 0 || addForAastha.isPending}
+              className="btn-pookie w-full text-sm font-bold"
+              style={{ opacity: bishalPicks.length === 0 ? 0.5 : 1 }}
             >
-              Read the Question 💍
+              {addForAastha.isPending ? "Saving... 💾" : "Save Bouquet 💕"}
             </button>
           </div>
-        )}
+
+          {/* Aastha's bouquet for Bishal */}
+          <div className="pookie-card p-5">
+            <h3
+              className="text-lg font-bold text-center mb-3"
+              style={{
+                fontFamily: "'Pacifico', Georgia, cursive",
+                background:
+                  "linear-gradient(135deg, oklch(0.65 0.2 295), oklch(0.75 0.18 260))",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Aastha's for Bishal 🌻
+            </h3>
+            {/* Preview */}
+            <div className="bouquet-preview p-3 mb-3 min-h-[80px] flex flex-wrap gap-1 items-center justify-center">
+              {aasthaPicks.length === 0 ? (
+                <p
+                  className="text-sm"
+                  style={{ color: "oklch(0.65 0.08 330)", fontStyle: "italic" }}
+                >
+                  Pick flowers below 👇
+                </p>
+              ) : (
+                aasthaPicks.map((f, i) => (
+                  <button
+                    // biome-ignore lint/suspicious/noArrayIndexKey: bouquet items can repeat
+                    key={`ap-${f}-${i}`}
+                    type="button"
+                    onClick={() =>
+                      setAasthaPicks((prev) =>
+                        prev.filter((_, idx) => idx !== i),
+                      )
+                    }
+                    className="text-2xl hover:opacity-60 transition-opacity"
+                    title="Remove"
+                  >
+                    {f}
+                  </button>
+                ))
+              )}
+            </div>
+            {/* Flower grid */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {FLOWERS.map((fl) => (
+                <button
+                  type="button"
+                  key={fl.emoji}
+                  onClick={() => setAasthaPicks((prev) => [...prev, fl.emoji])}
+                  className="pookie-card p-2 text-center hover:scale-105 transition-transform cursor-pointer border-0"
+                >
+                  <span className="text-2xl block">{fl.emoji}</span>
+                  <span
+                    className="text-xs"
+                    style={{
+                      color: "oklch(0.55 0.1 330)",
+                      fontFamily: "'Nunito', Georgia, sans-serif",
+                    }}
+                  >
+                    {fl.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              data-ocid="bouquet.aastha.primary_button"
+              onClick={handleSaveAastha}
+              disabled={aasthaPicks.length === 0 || addForBishal.isPending}
+              className="btn-pookie w-full text-sm font-bold"
+              style={{
+                opacity: aasthaPicks.length === 0 ? 0.5 : 1,
+                background:
+                  "linear-gradient(135deg, oklch(0.65 0.2 295), oklch(0.72 0.18 260))",
+              }}
+            >
+              {addForBishal.isPending ? "Saving... 💾" : "Save Bouquet 💕"}
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-// ─── Step 3: The Proposal ──────────────────────────────────────────────────────
-function ProposalPage({
-  onYes,
-}: {
-  onYes: () => void;
-}) {
-  const [noPos, setNoPos] = useState<{ x: number; y: number } | null>(null);
-  const [noSize, setNoSize] = useState(1);
-  const [clickCount, setClickCount] = useState(0);
-  const noButtonRef = useRef<HTMLButtonElement>(null);
-  const saveProposalMutation = useSaveProposalResponse();
+// ─── LettersSection ───────────────────────────────────────────────────────────
+function LettersSection() {
+  const { data: letters = [], isLoading } = useGetAllLetters();
+  const addLetter = useAddLetter();
+  const deleteLetter = useDeleteLetter();
 
-  const getRandomPos = useCallback(() => {
-    const margin = 80;
-    const maxX = window.innerWidth - margin;
-    const maxY = window.innerHeight - margin;
-    return {
-      x: margin + Math.random() * (maxX - 2 * margin),
-      y: margin + Math.random() * (maxY - 2 * margin),
-    };
-  }, []);
+  const [author, setAuthor] = useState<"Bishal" | "Aastha">("Bishal");
+  const [content, setContent] = useState("");
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!noButtonRef.current) return;
-      const btn = noButtonRef.current.getBoundingClientRect();
-      const btnCenterX = btn.left + btn.width / 2;
-      const btnCenterY = btn.top + btn.height / 2;
-      const dist = Math.hypot(e.clientX - btnCenterX, e.clientY - btnCenterY);
-
-      if (dist < 160) {
-        const newPos = getRandomPos();
-        setNoPos(newPos);
-        setNoSize((prev) => Math.max(0.3, prev - 0.07));
-      }
-    },
-    [getRandomPos],
-  );
-
-  const handleNoClick = () => {
-    setClickCount((c) => c + 1);
-    const newPos = getRandomPos();
-    setNoPos(newPos);
-    setNoSize((prev) => Math.max(0.25, prev - 0.1));
-  };
-
-  const handleYes = async () => {
-    try {
-      await saveProposalMutation.mutateAsync(true);
-    } catch (e) {
-      console.error("Failed to save response", e);
+  const handleSend = async () => {
+    if (!content.trim()) {
+      toast.error("Write something first! 💌");
+      return;
     }
-    onYes();
+    try {
+      await addLetter.mutateAsync({ author, content: content.trim() });
+      setContent("");
+      toast.success(`${author}'s letter sent! 💌`);
+    } catch {
+      toast.error("Couldn't send letter 😢");
+    }
   };
 
-  const noMessages = [
-    "No...",
-    "Still no! 😜",
-    "Nope! 🙈",
-    "Nahh~ 😅",
-    "Try again! 😂",
-    "Psych! 🤣",
-    "Nuh-uh 😝",
-    "Hehe no 🙊",
-  ];
-  const noLabel = noMessages[Math.min(clickCount, noMessages.length - 1)];
-
   return (
-    <div
-      className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden"
+    <section
+      className="min-h-full px-4 py-8 pb-28 overflow-auto"
       style={{
         background:
-          "linear-gradient(135deg, oklch(0.95 0.04 330) 0%, oklch(0.97 0.03 295) 50%, oklch(0.94 0.05 350) 100%)",
-      }}
-      onMouseMove={handleMouseMove}
-    >
-      <FloatingHeartsBackground count={18} />
-
-      {/* Ring image */}
-      <div className="relative z-10 text-center max-w-xl mx-auto">
-        <div className="ring-float mb-6">
-          <img
-            src="/assets/generated/ring-hero.dim_600x600.png"
-            alt="Engagement ring"
-            className="w-40 h-40 md:w-52 md:h-52 mx-auto object-contain"
-          />
-        </div>
-
-        <h2
-          className="text-4xl md:text-6xl font-bold mb-4 fade-in-up"
-          style={{
-            fontFamily: "'Pacifico', Georgia, cursive",
-            background:
-              "linear-gradient(135deg, oklch(0.52 0.22 0), oklch(0.65 0.2 320), oklch(0.78 0.16 295))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          Will You Marry Me?
-        </h2>
-
-        <div className="flex justify-center gap-3 text-3xl my-4 sparkle">
-          💍✨💍
-        </div>
-
-        <p
-          className="text-lg mb-10 fade-in-up delay-300"
-          style={{
-            fontFamily: "'Nunito', Georgia, sans-serif",
-            fontStyle: "italic",
-            color: "oklch(0.5 0.12 330)",
-            opacity: 0,
-          }}
-        >
-          Aastha, you are the love of my life, my best friend, my forever person
-          💕🐻
-        </p>
-
-        {/* Yes button */}
-        <div className="flex justify-center mb-8">
-          <button
-            type="button"
-            data-ocid="proposal.primary_button"
-            onClick={handleYes}
-            disabled={saveProposalMutation.isPending}
-            className="yes-throb text-white font-bold rounded-full px-12 py-5 text-xl border-none cursor-pointer"
-            style={{
-              background:
-                "linear-gradient(135deg, oklch(0.62 0.22 0), oklch(0.72 0.2 320), oklch(0.78 0.16 295))",
-              boxShadow:
-                "0 0 30px 8px oklch(0.62 0.22 0 / 0.45), 0 0 60px 15px oklch(0.72 0.18 320 / 0.25)",
-            }}
-          >
-            {saveProposalMutation.isPending ? "💖 ..." : "Yes, forever! 💖"}
-          </button>
-        </div>
-
-        {/* No button — either in flow or floating */}
-        <div className="flex justify-center">
-          <button
-            type="button"
-            ref={noButtonRef}
-            data-ocid="proposal.secondary_button"
-            onClick={handleNoClick}
-            className="rounded-full border-2 font-semibold cursor-pointer transition-all duration-200"
-            style={{
-              position: noPos ? "fixed" : "relative",
-              left: noPos ? `${noPos.x}px` : undefined,
-              top: noPos ? `${noPos.y}px` : undefined,
-              transform: noPos
-                ? `translate(-50%, -50%) scale(${noSize})`
-                : `scale(${noSize})`,
-              zIndex: 100,
-              padding: `${0.5 * noSize}rem ${1.5 * noSize}rem`,
-              fontSize: `${0.9 * noSize}rem`,
-              color: "oklch(0.55 0.1 330)",
-              borderColor: "oklch(0.75 0.08 330)",
-              background: "oklch(0.97 0.02 330 / 0.8)",
-              pointerEvents: noSize < 0.35 ? "none" : "auto",
-            }}
-          >
-            {noLabel}
-          </button>
-        </div>
-
-        {noSize < 0.6 && (
-          <p
-            className="text-sm mt-6 fade-in"
-            style={{
-              fontFamily: "'Nunito', Georgia, sans-serif",
-              fontStyle: "italic",
-              color: "oklch(0.62 0.1 330)",
-            }}
-          >
-            Come on Aastha, I think we both know the answer 😏💖
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Step 4: Celebration ───────────────────────────────────────────────────────
-function CelebrationPage({ bouquet }: { bouquet: string[] }) {
-  return (
-    <div
-      data-ocid="celebration.section"
-      className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(135deg, oklch(0.94 0.06 340) 0%, oklch(0.92 0.07 320) 50%, oklch(0.95 0.05 295) 100%)",
+          "linear-gradient(155deg, oklch(0.98 0.02 340) 0%, oklch(0.93 0.05 320) 50%, oklch(0.96 0.03 295) 100%)",
       }}
     >
-      <ConfettiRain count={35} />
-      <FloatingHeartsBackground count={20} />
-
-      <div className="relative z-10 text-center max-w-2xl mx-auto">
-        {/* Big celebration title */}
-        <div className="text-5xl mb-4 bounce-gentle">🎉</div>
-
-        <h1
-          className="text-5xl md:text-7xl font-bold mb-4 fade-in-up"
-          style={{
-            fontFamily: "'Pacifico', Georgia, cursive",
-            background:
-              "linear-gradient(135deg, oklch(0.52 0.22 0), oklch(0.68 0.2 320), oklch(0.8 0.14 80))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          Aastha Said YES!
-        </h1>
-
-        <div className="flex justify-center gap-3 text-4xl my-4">
-          <span className="sparkle">🎉</span>
-          <span className="sparkle delay-100">💍</span>
-          <span className="sparkle delay-200">💖</span>
-          <span className="sparkle delay-300">🥂</span>
-          <span className="sparkle delay-400">🎊</span>
-        </div>
-
-        <p
-          className="text-xl md:text-2xl mb-8 fade-in-up delay-300"
-          style={{
-            fontFamily: "'Nunito', Georgia, sans-serif",
-            fontStyle: "italic",
-            color: "oklch(0.42 0.14 330)",
-            opacity: 0,
-          }}
-        >
-          The most beautiful answer to the most important question 💕✨
-        </p>
-
-        {/* Celebration card */}
-        <div
-          className="pookie-card p-8 mb-8 fade-in-up delay-500"
-          style={{ opacity: 0 }}
-        >
-          <div className="text-4xl mb-4">💍🌸💍</div>
-          <p
-            className="text-2xl font-bold mb-2"
+      <FloatingHeartsBackground count={8} />
+      <div className="relative z-10 max-w-xl mx-auto">
+        <div className="text-center mb-6 fade-in-up">
+          <div className="text-3xl mb-1 sparkle">💌</div>
+          <h2
+            className="text-4xl font-bold"
             style={{
               fontFamily: "'Pacifico', Georgia, cursive",
               background:
-                "linear-gradient(135deg, oklch(0.52 0.22 0), oklch(0.68 0.2 320))",
+                "linear-gradient(135deg, oklch(0.55 0.22 0), oklch(0.72 0.2 295))",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
             }}
           >
-            We&apos;re getting married! 🎊
-          </p>
+            Love Letters 💌
+          </h2>
           <p
-            className="text-lg"
             style={{
               fontFamily: "'Nunito', Georgia, sans-serif",
+              color: "oklch(0.55 0.1 330)",
               fontStyle: "italic",
-              color: "oklch(0.5 0.12 330)",
             }}
           >
-            Forever starts today, Aastha 🐻💕
+            Write sweet notes to each other 🌸
           </p>
-
-          <div className="flex justify-center gap-2 text-3xl mt-4">
-            <span className="sparkle">💖</span>
-            <span className="sparkle delay-100">💕</span>
-            <span className="sparkle delay-200">💗</span>
-            <span className="sparkle delay-300">💓</span>
-            <span className="sparkle delay-400">💞</span>
-          </div>
         </div>
 
-        {/* Bouquet display */}
-        {bouquet.length > 0 && (
-          <div
-            className="bouquet-preview p-6 mb-8 fade-in-up delay-700"
-            style={{ opacity: 0 }}
+        {/* Compose */}
+        <div
+          className="pookie-card p-5 mb-6 fade-in-up"
+          style={{ animationDelay: "0.2s" }}
+        >
+          <h3
+            className="text-lg font-bold mb-3"
+            style={{
+              fontFamily: "'Nunito', Georgia, sans-serif",
+              color: "oklch(0.45 0.14 330)",
+            }}
           >
+            Write a Letter ✍️
+          </h3>
+          {/* Author toggle */}
+          <div className="flex gap-3 mb-3" data-ocid="letters.author.toggle">
+            {(["Bishal", "Aastha"] as const).map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setAuthor(name)}
+                className="flex-1 py-2 rounded-2xl font-bold text-sm transition-all"
+                style={{
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                  background:
+                    author === name
+                      ? name === "Bishal"
+                        ? "linear-gradient(135deg, oklch(0.62 0.22 0), oklch(0.72 0.2 320))"
+                        : "linear-gradient(135deg, oklch(0.65 0.18 295), oklch(0.72 0.16 260))"
+                      : "oklch(0.95 0.02 340)",
+                  color: author === name ? "white" : "oklch(0.55 0.1 330)",
+                  border:
+                    author === name
+                      ? "none"
+                      : "1.5px solid oklch(0.85 0.06 330)",
+                  transform: author === name ? "scale(1.03)" : "scale(1)",
+                }}
+              >
+                {name === "Bishal" ? "🐻 Bishal" : "🌸 Aastha"}
+              </button>
+            ))}
+          </div>
+          {/* Textarea */}
+          <textarea
+            data-ocid="letters.textarea"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={`Dear ${author === "Bishal" ? "Aastha" : "Bishal"}, I wanted to say... 💕`}
+            rows={5}
+            className="w-full rounded-2xl p-3 resize-none outline-none focus:ring-2"
+            style={{
+              fontFamily: "'Nunito', Georgia, sans-serif",
+              fontSize: "0.95rem",
+              background: "oklch(0.99 0.01 340)",
+              border: "1.5px solid oklch(0.88 0.05 330)",
+              color: "oklch(0.32 0.08 340)",
+            }}
+          />
+          <button
+            type="button"
+            data-ocid="letters.submit_button"
+            onClick={handleSend}
+            disabled={addLetter.isPending || !content.trim()}
+            className="btn-pookie mt-3 w-full font-bold text-sm"
+            style={{ opacity: !content.trim() ? 0.5 : 1 }}
+          >
+            {addLetter.isPending ? "Sending... 💌" : "Send Letter 💌"}
+          </button>
+        </div>
+
+        {/* Letters list */}
+        {isLoading && (
+          <div data-ocid="letters.loading_state" className="text-center py-10">
+            <span className="text-3xl sparkle">💌</span>
             <p
-              className="text-sm font-semibold mb-3"
-              style={{ color: "oklch(0.55 0.12 330)" }}
-            >
-              💐 Your Special Bouquet 💐
-            </p>
-            <div className="flex flex-wrap gap-2 justify-center text-4xl">
-              {bouquet.map((flower, i) => (
-                <span
-                  // biome-ignore lint/suspicious/noArrayIndexKey: bouquet items can repeat same emoji
-                  key={`celebration-${flower}-${i}`}
-                  className="sparkle"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                >
-                  {flower}
-                </span>
-              ))}
-            </div>
-            <p
-              className="text-sm mt-3"
               style={{
+                color: "oklch(0.6 0.1 330)",
                 fontFamily: "'Nunito', Georgia, sans-serif",
                 fontStyle: "italic",
-                color: "oklch(0.6 0.1 330)",
               }}
             >
-              Made with so much love, just for you, Aastha 🌿💖
+              Loading love letters...
             </p>
           </div>
         )}
 
-        {/* Forever message */}
-        <div
-          className="text-center fade-in-up delay-1000"
-          style={{ opacity: 0 }}
-        >
-          <div className="text-5xl mb-3">🥂</div>
-          <p
-            className="text-lg"
+        {!isLoading && letters.length === 0 && (
+          <div
+            data-ocid="letters.empty_state"
+            className="pookie-card p-8 text-center"
+          >
+            <div className="text-5xl mb-3">💌</div>
+            <p
+              style={{
+                color: "oklch(0.6 0.1 330)",
+                fontFamily: "'Nunito', Georgia, sans-serif",
+                fontStyle: "italic",
+              }}
+            >
+              No letters yet... be the first to write! 🌸
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {letters.map((letter, index) => {
+            const ocidItem =
+              index === 0
+                ? "letters.item.1"
+                : index === 1
+                  ? "letters.item.2"
+                  : (`letters.item.${index + 1}` as const);
+            const ocidDel =
+              index === 0
+                ? "letters.delete_button.1"
+                : index === 1
+                  ? "letters.delete_button.2"
+                  : (`letters.delete_button.${index + 1}` as const);
+            const isBishal = letter.author === "Bishal";
+            return (
+              <div
+                key={String(letter.id)}
+                data-ocid={ocidItem}
+                className="pookie-card p-5 fade-in-up"
+                style={{
+                  background: isBishal
+                    ? "linear-gradient(135deg, oklch(0.97 0.03 0 / 0.95), oklch(0.94 0.05 340 / 0.9))"
+                    : "linear-gradient(135deg, oklch(0.97 0.03 295 / 0.95), oklch(0.94 0.04 280 / 0.9))",
+                  borderColor: isBishal
+                    ? "oklch(0.85 0.1 0 / 0.4)"
+                    : "oklch(0.82 0.08 295 / 0.4)",
+                  animationDelay: `${index * 0.1}s`,
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className="font-bold text-sm"
+                    style={{
+                      fontFamily: "'Nunito', Georgia, sans-serif",
+                      color: isBishal
+                        ? "oklch(0.52 0.22 0)"
+                        : "oklch(0.52 0.18 295)",
+                    }}
+                  >
+                    {isBishal ? "🐻 Bishal" : "🌸 Aastha"}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-xs"
+                      style={{
+                        color: "oklch(0.65 0.06 330)",
+                        fontFamily: "'Nunito', Georgia, sans-serif",
+                      }}
+                    >
+                      {formatTimestamp(letter.timestamp)}
+                    </span>
+                    <button
+                      type="button"
+                      data-ocid={ocidDel}
+                      onClick={() => deleteLetter.mutate(letter.id)}
+                      className="text-lg hover:scale-110 transition-transform"
+                      title="Delete letter"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                <p
+                  className="leading-relaxed"
+                  style={{
+                    fontFamily: "'Nunito', Georgia, sans-serif",
+                    color: "oklch(0.38 0.08 340)",
+                    fontStyle: "italic",
+                    fontSize: "0.95rem",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {letter.content}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── NotesSection ─────────────────────────────────────────────────────────────
+function NotesSection() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawing = useRef(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+  const [penColor, setPenColor] = useState(PEN_COLORS[0]);
+  const [penSize, setPenSize] = useState(3);
+  const [author, setAuthor] = useState<"Bishal" | "Aastha">("Bishal");
+  const [caption, setCaption] = useState("");
+
+  const { data: notes = [], isLoading } = useGetAllHandwrittenNotes();
+  const addNote = useAddHandwrittenNote();
+  const deleteNote = useDeleteHandwrittenNote();
+
+  const getPos = useCallback(
+    (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      if ("touches" in e) {
+        const t = e.touches[0];
+        return {
+          x: (t.clientX - rect.left) * scaleX,
+          y: (t.clientY - rect.top) * scaleY,
+        };
+      }
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      };
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Initialize white background
+    ctx.fillStyle = "#fff9fb";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const onStart = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      isDrawing.current = true;
+      lastPos.current = getPos(e, canvas);
+    };
+
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      if (!isDrawing.current || !lastPos.current) return;
+      const pos = getPos(e, canvas);
+      ctx.beginPath();
+      ctx.moveTo(lastPos.current.x, lastPos.current.y);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = penColor;
+      ctx.lineWidth = penSize;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+      lastPos.current = pos;
+    };
+
+    const onEnd = () => {
+      isDrawing.current = false;
+      lastPos.current = null;
+    };
+
+    canvas.addEventListener("mousedown", onStart);
+    canvas.addEventListener("mousemove", onMove);
+    canvas.addEventListener("mouseup", onEnd);
+    canvas.addEventListener("mouseleave", onEnd);
+    canvas.addEventListener("touchstart", onStart, { passive: false });
+    canvas.addEventListener("touchmove", onMove, { passive: false });
+    canvas.addEventListener("touchend", onEnd);
+
+    return () => {
+      canvas.removeEventListener("mousedown", onStart);
+      canvas.removeEventListener("mousemove", onMove);
+      canvas.removeEventListener("mouseup", onEnd);
+      canvas.removeEventListener("mouseleave", onEnd);
+      canvas.removeEventListener("touchstart", onStart);
+      canvas.removeEventListener("touchmove", onMove);
+      canvas.removeEventListener("touchend", onEnd);
+    };
+  }, [penColor, penSize, getPos]);
+
+  const handleClear = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#fff9fb";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
+  const handleSave = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const imageData = canvas.toDataURL("image/png");
+    try {
+      await addNote.mutateAsync({ author, imageData, caption: caption.trim() });
+      setCaption("");
+      handleClear();
+      toast.success(`${author}'s note saved! ✏️`);
+    } catch {
+      toast.error("Failed to save note 😢");
+    }
+  };
+
+  return (
+    <section
+      className="min-h-full px-4 py-8 pb-28 overflow-auto"
+      style={{
+        background:
+          "linear-gradient(155deg, oklch(0.98 0.015 295) 0%, oklch(0.94 0.04 320) 50%, oklch(0.97 0.02 350) 100%)",
+      }}
+    >
+      <FloatingHeartsBackground count={6} />
+      <div className="relative z-10 max-w-xl mx-auto">
+        <div className="text-center mb-6 fade-in-up">
+          <div className="text-3xl mb-1">✏️💕</div>
+          <h2
+            className="text-4xl font-bold"
             style={{
-              fontFamily: "'Nunito', Georgia, sans-serif",
-              color: "oklch(0.48 0.14 330)",
+              fontFamily: "'Pacifico', Georgia, cursive",
+              background:
+                "linear-gradient(135deg, oklch(0.55 0.22 0), oklch(0.7 0.18 295))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
             }}
           >
-            Here&apos;s to forever, my Aastha 🐻✨💍
+            Handwritten Notes ✏️
+          </h2>
+          <p
+            style={{
+              fontFamily: "'Nunito', Georgia, sans-serif",
+              color: "oklch(0.55 0.1 330)",
+              fontStyle: "italic",
+            }}
+          >
+            Draw sweet notes for each other 💕
           </p>
-          <div className="flex justify-center gap-3 text-2xl mt-4">
-            <span>🌹</span>
-            <span>💍</span>
-            <span>🌸</span>
-            <span>💖</span>
-            <span>🌷</span>
-            <span>🎊</span>
-            <span>🌺</span>
+        </div>
+
+        <div
+          className="pookie-card p-5 mb-6 fade-in-up"
+          style={{ animationDelay: "0.2s" }}
+        >
+          {/* Author toggle */}
+          <div className="flex gap-3 mb-3">
+            {(["Bishal", "Aastha"] as const).map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setAuthor(name)}
+                className="flex-1 py-2 rounded-2xl font-bold text-sm transition-all"
+                style={{
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                  background:
+                    author === name
+                      ? name === "Bishal"
+                        ? "linear-gradient(135deg, oklch(0.62 0.22 0), oklch(0.72 0.2 320))"
+                        : "linear-gradient(135deg, oklch(0.65 0.18 295), oklch(0.72 0.16 260))"
+                      : "oklch(0.95 0.02 340)",
+                  color: author === name ? "white" : "oklch(0.55 0.1 330)",
+                  border:
+                    author === name
+                      ? "none"
+                      : "1.5px solid oklch(0.85 0.06 330)",
+                }}
+              >
+                {name === "Bishal" ? "🐻 Bishal" : "🌸 Aastha"}
+              </button>
+            ))}
+          </div>
+
+          {/* Canvas */}
+          <div className="relative mb-3">
+            <canvas
+              ref={canvasRef}
+              data-ocid="notes.canvas_target"
+              width={600}
+              height={300}
+              className="w-full rounded-2xl cursor-crosshair"
+              style={{
+                border: "2px dashed oklch(0.78 0.12 330 / 0.5)",
+                background: "#fff9fb",
+                touchAction: "none",
+              }}
+            />
+          </div>
+
+          {/* Controls row */}
+          <div className="flex flex-wrap gap-3 items-center mb-3">
+            {/* Pen colors */}
+            <div className="flex gap-2 items-center">
+              <span
+                className="text-xs font-semibold"
+                style={{
+                  color: "oklch(0.55 0.1 330)",
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                }}
+              >
+                Pen:
+              </span>
+              {PEN_COLORS.map((c) => (
+                <button
+                  type="button"
+                  key={c}
+                  onClick={() => setPenColor(c)}
+                  className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{
+                    background: c,
+                    borderColor:
+                      penColor === c ? "oklch(0.4 0.12 330)" : "transparent",
+                    transform: penColor === c ? "scale(1.3)" : "scale(1)",
+                  }}
+                />
+              ))}
+            </div>
+            {/* Size */}
+            <div className="flex gap-2 items-center flex-1 min-w-[120px]">
+              <span
+                className="text-xs font-semibold"
+                style={{
+                  color: "oklch(0.55 0.1 330)",
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                }}
+              >
+                Size:
+              </span>
+              <input
+                type="range"
+                min={1}
+                max={16}
+                value={penSize}
+                onChange={(e) => setPenSize(Number(e.target.value))}
+                className="flex-1 accent-pink-400"
+              />
+              <span
+                className="text-xs tabular-nums"
+                style={{ color: "oklch(0.55 0.1 330)" }}
+              >
+                {penSize}px
+              </span>
+            </div>
+            {/* Clear */}
+            <button
+              type="button"
+              data-ocid="notes.clear_button"
+              onClick={handleClear}
+              className="py-1 px-3 rounded-2xl text-sm font-semibold transition-all hover:scale-105"
+              style={{
+                background: "oklch(0.95 0.03 0 / 0.8)",
+                border: "1.5px solid oklch(0.8 0.12 0 / 0.4)",
+                color: "oklch(0.52 0.18 0)",
+                fontFamily: "'Nunito', Georgia, sans-serif",
+              }}
+            >
+              🗑️ Clear
+            </button>
+          </div>
+
+          {/* Caption */}
+          <input
+            type="text"
+            data-ocid="notes.caption.input"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="Add a cute caption... 💕"
+            className="w-full rounded-2xl px-3 py-2 mb-3 outline-none"
+            style={{
+              fontFamily: "'Nunito', Georgia, sans-serif",
+              fontSize: "0.9rem",
+              background: "oklch(0.99 0.01 340)",
+              border: "1.5px solid oklch(0.88 0.05 330)",
+              color: "oklch(0.32 0.08 340)",
+            }}
+          />
+
+          {/* Save */}
+          <button
+            type="button"
+            data-ocid="notes.save_button"
+            onClick={handleSave}
+            disabled={addNote.isPending}
+            className="btn-pookie w-full font-bold text-sm"
+          >
+            {addNote.isPending ? "Saving... 💾" : "Save Note ✏️💕"}
+          </button>
+        </div>
+
+        {/* Notes gallery */}
+        {isLoading && (
+          <div data-ocid="notes.loading_state" className="text-center py-10">
+            <span className="text-3xl sparkle">✏️</span>
+            <p
+              style={{
+                color: "oklch(0.6 0.1 330)",
+                fontFamily: "'Nunito', Georgia, sans-serif",
+                fontStyle: "italic",
+              }}
+            >
+              Loading your notes...
+            </p>
+          </div>
+        )}
+
+        {!isLoading && notes.length === 0 && (
+          <div
+            data-ocid="notes.empty_state"
+            className="pookie-card p-8 text-center"
+          >
+            <div className="text-5xl mb-3">✏️</div>
+            <p
+              style={{
+                color: "oklch(0.6 0.1 330)",
+                fontFamily: "'Nunito', Georgia, sans-serif",
+                fontStyle: "italic",
+              }}
+            >
+              No notes yet! Draw the first one 🌸
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-4">
+          {notes.map((note, index) => {
+            const ocidItem =
+              index === 0
+                ? "notes.item.1"
+                : (`notes.item.${index + 1}` as const);
+            const ocidDel =
+              index === 0
+                ? "notes.delete_button.1"
+                : (`notes.delete_button.${index + 1}` as const);
+            return (
+              <div
+                key={String(note.id)}
+                data-ocid={ocidItem}
+                className="fade-in-up"
+                style={{
+                  background: "white",
+                  borderRadius: "1rem",
+                  padding: "10px",
+                  paddingBottom: "14px",
+                  boxShadow:
+                    "0 4px 20px oklch(0.62 0.22 0 / 0.12), 0 8px 30px rgba(0,0,0,0.06)",
+                  border: "2px solid oklch(0.92 0.04 340)",
+                  animationDelay: `${index * 0.1}s`,
+                }}
+              >
+                <img
+                  src={note.imageData}
+                  alt={note.caption || "Note"}
+                  className="w-full rounded-xl mb-2"
+                  style={{ aspectRatio: "2/1", objectFit: "cover" }}
+                />
+                {note.caption && (
+                  <p
+                    className="text-xs text-center font-semibold mb-1"
+                    style={{
+                      color: "oklch(0.45 0.14 330)",
+                      fontFamily: "'Nunito', Georgia, sans-serif",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    {note.caption}
+                  </p>
+                )}
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-xs"
+                    style={{
+                      color: "oklch(0.62 0.1 330)",
+                      fontFamily: "'Nunito', Georgia, sans-serif",
+                    }}
+                  >
+                    {note.author === "Bishal" ? "🐻" : "🌸"} {note.author}
+                  </span>
+                  <button
+                    type="button"
+                    data-ocid={ocidDel}
+                    onClick={() => deleteNote.mutate(note.id)}
+                    className="text-sm hover:scale-110 transition-transform"
+                    title="Delete note"
+                  >
+                    🗑️
+                  </button>
+                </div>
+                <p
+                  className="text-xs text-center mt-1"
+                  style={{
+                    color: "oklch(0.72 0.04 330)",
+                    fontFamily: "'Nunito', Georgia, sans-serif",
+                  }}
+                >
+                  {formatTimestamp(note.timestamp)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── CertificateSection ───────────────────────────────────────────────────────
+function CertificateSection() {
+  const { data: cert, isLoading } = useGetWeddingCertificate();
+  const setDate = useSetWeddingDate();
+  const signBishal = useSignWeddingCertificateAsBishal();
+  const signAastha = useSignWeddingCertificateAsAastha();
+
+  const [weddingDate, setWeddingDate] = useState(cert?.weddingDate || "");
+
+  useEffect(() => {
+    if (cert?.weddingDate) setWeddingDate(cert.weddingDate);
+  }, [cert?.weddingDate]);
+
+  const bothSigned = cert?.bishalSigned && cert?.aasthaSigned;
+
+  const handleDateChange = async (newDate: string) => {
+    setWeddingDate(newDate);
+    if (newDate) {
+      try {
+        await setDate.mutateAsync(newDate);
+        toast.success("Wedding date set! 💍");
+      } catch {
+        toast.error("Couldn't save date 😢");
+      }
+    }
+  };
+
+  const handleSignBishal = async () => {
+    try {
+      await signBishal.mutateAsync();
+      toast.success("Bishal says I Do! 💍");
+    } catch {
+      toast.error("Couldn't sign 😢");
+    }
+  };
+
+  const handleSignAastha = async () => {
+    try {
+      await signAastha.mutateAsync();
+      toast.success("Aastha says I Do! 💍");
+    } catch {
+      toast.error("Couldn't sign 😢");
+    }
+  };
+
+  return (
+    <section
+      className="min-h-full px-4 py-8 pb-28 overflow-auto"
+      style={{
+        background:
+          "linear-gradient(155deg, oklch(0.97 0.025 60) 0%, oklch(0.94 0.04 340) 40%, oklch(0.96 0.03 295) 100%)",
+      }}
+    >
+      {bothSigned && <ConfettiRain count={25} />}
+      <FloatingHeartsBackground count={10} />
+
+      <div className="relative z-10 max-w-2xl mx-auto">
+        <div className="text-center mb-6 fade-in-up">
+          <div className="text-3xl mb-1">
+            <span className="sparkle">💍</span>
+          </div>
+          <h2
+            className="text-3xl md:text-4xl font-bold"
+            style={{
+              fontFamily: "'Pacifico', Georgia, cursive",
+              background:
+                "linear-gradient(135deg, oklch(0.55 0.22 0), oklch(0.72 0.18 80))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            Certificate of Love 💍
+          </h2>
+        </div>
+
+        {/* Both signed celebration */}
+        {bothSigned && (
+          <div
+            className="pookie-card p-6 mb-6 text-center fade-in-up"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(0.94 0.08 80 / 0.95), oklch(0.92 0.07 340 / 0.9))",
+              border: "2px solid oklch(0.82 0.14 80 / 0.5)",
+            }}
+          >
+            <div className="text-5xl mb-2">🎉💒✨</div>
+            <p
+              className="text-2xl font-bold"
+              style={{
+                fontFamily: "'Pacifico', Georgia, cursive",
+                background:
+                  "linear-gradient(135deg, oklch(0.52 0.22 0), oklch(0.6 0.18 80))",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              We&apos;re Official! 💒✨
+            </p>
+            <p
+              style={{
+                fontFamily: "'Nunito', Georgia, sans-serif",
+                color: "oklch(0.45 0.14 340)",
+                fontStyle: "italic",
+              }}
+            >
+              Bishal & Aastha — forever and always 💖
+            </p>
+          </div>
+        )}
+
+        {/* Certificate */}
+        <div
+          className="fade-in-up"
+          style={{
+            background:
+              "linear-gradient(135deg, oklch(0.99 0.015 60), oklch(0.98 0.02 340))",
+            border: "3px solid oklch(0.82 0.14 80 / 0.7)",
+            borderRadius: "2rem",
+            padding: "2rem",
+            boxShadow:
+              "0 8px 40px oklch(0.82 0.14 80 / 0.2), inset 0 0 60px oklch(0.98 0.02 60 / 0.5)",
+            position: "relative",
+            overflow: "hidden",
+            animationDelay: "0.3s",
+          }}
+        >
+          {/* Decorative corner hearts */}
+          {[
+            "top-3 left-4",
+            "top-3 right-4",
+            "bottom-3 left-4",
+            "bottom-3 right-4",
+          ].map((pos, i) => (
+            <span
+              key={pos}
+              className={`absolute ${pos} text-2xl opacity-60 sparkle`}
+              style={{ animationDelay: `${i * 0.3}s` }}
+            >
+              💖
+            </span>
+          ))}
+
+          {/* Title */}
+          <div className="text-center mb-4">
+            <div className="flex justify-center gap-3 text-xl mb-2">
+              <span>🌸</span>
+              <span className="sparkle">💍</span>
+              <span>🌸</span>
+            </div>
+            <h3
+              className="text-2xl md:text-3xl font-bold mb-1"
+              style={{
+                fontFamily: "'Pacifico', Georgia, cursive",
+                background:
+                  "linear-gradient(135deg, oklch(0.52 0.2 0), oklch(0.65 0.18 80))",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Certificate of Love &amp; Eternal Bond
+            </h3>
+            <p
+              className="text-sm italic"
+              style={{
+                color: "oklch(0.56 0.12 330)",
+                fontFamily: "'Nunito', Georgia, sans-serif",
+              }}
+            >
+              We promise to love each other forever and ever 🌟
+            </p>
+          </div>
+
+          {/* Decorative line */}
+          <div
+            className="w-full my-4"
+            style={{
+              height: "2px",
+              background:
+                "linear-gradient(90deg, transparent, oklch(0.82 0.14 80), oklch(0.72 0.2 320), transparent)",
+            }}
+          />
+
+          {/* Names */}
+          <div className="flex items-center justify-center gap-6 mb-5">
+            <div className="text-center">
+              <div className="text-3xl mb-1">🐻</div>
+              <p
+                className="text-xl font-bold"
+                style={{
+                  fontFamily: "'Pacifico', Georgia, cursive",
+                  color: "oklch(0.52 0.22 0)",
+                }}
+              >
+                Bishal Dey
+              </p>
+              <p
+                className="text-xs"
+                style={{
+                  color: "oklch(0.65 0.1 0)",
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                }}
+              >
+                Groom
+              </p>
+              {cert?.bishalSigned && (
+                <div
+                  className="mt-2 px-3 py-1 rounded-full text-xs font-bold"
+                  style={{
+                    background: "oklch(0.92 0.08 130 / 0.8)",
+                    color: "oklch(0.35 0.18 140)",
+                    border: "1.5px solid oklch(0.75 0.18 140 / 0.5)",
+                  }}
+                >
+                  ✅ Signed
+                </div>
+              )}
+            </div>
+            <div className="text-3xl bounce-gentle">💍</div>
+            <div className="text-center">
+              <div className="text-3xl mb-1">🌸</div>
+              <p
+                className="text-xl font-bold"
+                style={{
+                  fontFamily: "'Pacifico', Georgia, cursive",
+                  color: "oklch(0.55 0.2 320)",
+                }}
+              >
+                Aastha Sarkar
+              </p>
+              <p
+                className="text-xs"
+                style={{
+                  color: "oklch(0.65 0.1 320)",
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                }}
+              >
+                Bride
+              </p>
+              {cert?.aasthaSigned && (
+                <div
+                  className="mt-2 px-3 py-1 rounded-full text-xs font-bold"
+                  style={{
+                    background: "oklch(0.92 0.08 130 / 0.8)",
+                    color: "oklch(0.35 0.18 140)",
+                    border: "1.5px solid oklch(0.75 0.18 140 / 0.5)",
+                  }}
+                >
+                  ✅ Signed
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Wedding date */}
+          <div className="text-center mb-5">
+            <label
+              htmlFor="wedding-date-input"
+              className="block text-sm font-bold mb-2"
+              style={{
+                color: "oklch(0.52 0.14 330)",
+                fontFamily: "'Nunito', Georgia, sans-serif",
+              }}
+            >
+              💒 Wedding Date
+            </label>
+            <input
+              id="wedding-date-input"
+              type="date"
+              data-ocid="certificate.date.input"
+              value={weddingDate}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="rounded-2xl px-4 py-2 outline-none text-center"
+              style={{
+                fontFamily: "'Nunito', Georgia, sans-serif",
+                background: "oklch(0.99 0.01 60)",
+                border: "2px solid oklch(0.82 0.12 80 / 0.5)",
+                color: "oklch(0.38 0.1 340)",
+                fontSize: "1rem",
+              }}
+            />
+            {weddingDate && (
+              <p
+                className="text-xs mt-1"
+                style={{
+                  color: "oklch(0.62 0.1 330)",
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                  fontStyle: "italic",
+                }}
+              >
+                {new Date(weddingDate).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}{" "}
+                🌸
+              </p>
+            )}
+          </div>
+
+          {/* Decorative line */}
+          <div
+            className="w-full mb-5"
+            style={{
+              height: "2px",
+              background:
+                "linear-gradient(90deg, transparent, oklch(0.82 0.14 80), oklch(0.72 0.2 320), transparent)",
+            }}
+          />
+
+          {/* Sign buttons */}
+          {isLoading ? (
+            <div
+              data-ocid="certificate.loading_state"
+              className="text-center py-4"
+            >
+              <span className="text-2xl sparkle">💍</span>
+              <p
+                style={{
+                  color: "oklch(0.6 0.1 330)",
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                }}
+              >
+                Loading...
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                type="button"
+                data-ocid="certificate.bishal.primary_button"
+                onClick={handleSignBishal}
+                disabled={signBishal.isPending || cert?.bishalSigned}
+                className="btn-pookie font-bold text-sm flex-1 sm:flex-none sm:px-6"
+                style={{
+                  opacity: cert?.bishalSigned ? 0.6 : 1,
+                  cursor: cert?.bishalSigned ? "not-allowed" : "pointer",
+                }}
+              >
+                {cert?.bishalSigned
+                  ? "Bishal Signed 💍✅"
+                  : signBishal.isPending
+                    ? "Signing... 💍"
+                    : "Bishal Says I Do 💍"}
+              </button>
+              <button
+                type="button"
+                data-ocid="certificate.aastha.primary_button"
+                onClick={handleSignAastha}
+                disabled={signAastha.isPending || cert?.aasthaSigned}
+                className="btn-pookie font-bold text-sm flex-1 sm:flex-none sm:px-6"
+                style={{
+                  opacity: cert?.aasthaSigned ? 0.6 : 1,
+                  cursor: cert?.aasthaSigned ? "not-allowed" : "pointer",
+                  background:
+                    "linear-gradient(135deg, oklch(0.65 0.18 295), oklch(0.72 0.16 260))",
+                }}
+              >
+                {cert?.aasthaSigned
+                  ? "Aastha Signed 💍✅"
+                  : signAastha.isPending
+                    ? "Signing... 💍"
+                    : "Aastha Says I Do 💍"}
+              </button>
+            </div>
+          )}
+
+          {/* Signed timestamps */}
+          {(cert?.bishalSignedAt || cert?.aasthaSignedAt) && (
+            <div className="mt-4 space-y-1">
+              {cert?.bishalSignedAt && (
+                <p
+                  className="text-xs text-center"
+                  style={{
+                    color: "oklch(0.6 0.1 330)",
+                    fontFamily: "'Nunito', Georgia, sans-serif",
+                  }}
+                >
+                  🐻 Bishal signed on {formatTimestamp(cert.bishalSignedAt)}
+                </p>
+              )}
+              {cert?.aasthaSignedAt && (
+                <p
+                  className="text-xs text-center"
+                  style={{
+                    color: "oklch(0.6 0.1 295)",
+                    fontFamily: "'Nunito', Georgia, sans-serif",
+                  }}
+                >
+                  🌸 Aastha signed on {formatTimestamp(cert.aasthaSignedAt)}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-center gap-3 text-xl mt-4">
+            <span className="sparkle">🌹</span>
+            <span className="sparkle delay-100">💍</span>
+            <span className="sparkle delay-200">🌸</span>
+            <span className="sparkle delay-300">💖</span>
+            <span className="sparkle delay-400">🌷</span>
           </div>
         </div>
       </div>
-    </div>
+    </section>
+  );
+}
+
+// ─── BottomNav ────────────────────────────────────────────────────────────────
+const NAV_ITEMS: { tab: Tab; emoji: string; label: string; ocid: string }[] = [
+  { tab: "home", emoji: "🏠", label: "Home", ocid: "nav.home.tab" },
+  { tab: "bouquet", emoji: "💐", label: "Bouquet", ocid: "nav.bouquet.tab" },
+  { tab: "letters", emoji: "💌", label: "Letters", ocid: "nav.letters.tab" },
+  { tab: "notes", emoji: "✏️", label: "Notes", ocid: "nav.notes.tab" },
+  {
+    tab: "certificate",
+    emoji: "💍",
+    label: "Certificate",
+    ocid: "nav.certificate.tab",
+  },
+];
+
+function BottomNav({
+  active,
+  onSelect,
+}: {
+  active: Tab;
+  onSelect: (t: Tab) => void;
+}) {
+  return (
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50"
+      style={{
+        background:
+          "linear-gradient(90deg, oklch(0.98 0.02 350 / 0.97), oklch(0.96 0.04 320 / 0.97))",
+        backdropFilter: "blur(16px)",
+        borderTop: "1.5px solid oklch(0.88 0.07 330 / 0.5)",
+        boxShadow: "0 -4px 20px oklch(0.62 0.22 0 / 0.1)",
+      }}
+    >
+      <div className="flex items-center justify-around max-w-lg mx-auto py-2 px-2">
+        {NAV_ITEMS.map(({ tab, emoji, label, ocid }) => {
+          const isActive = active === tab;
+          return (
+            <button
+              key={tab}
+              type="button"
+              data-ocid={ocid}
+              onClick={() => onSelect(tab)}
+              className="flex flex-col items-center justify-center px-2 py-1 rounded-2xl transition-all duration-200"
+              style={{
+                background: isActive
+                  ? "linear-gradient(135deg, oklch(0.62 0.22 0 / 0.15), oklch(0.72 0.18 320 / 0.1))"
+                  : "transparent",
+                transform: isActive
+                  ? "scale(1.08) translateY(-2px)"
+                  : "scale(1)",
+                minWidth: "56px",
+              }}
+            >
+              <span
+                className="text-2xl leading-none mb-0.5"
+                style={{
+                  filter: isActive
+                    ? "drop-shadow(0 2px 4px oklch(0.62 0.22 0 / 0.4))"
+                    : "none",
+                  transform: isActive ? "scale(1.15)" : "scale(1)",
+                  display: "block",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {emoji}
+              </span>
+              <span
+                className="text-xs font-semibold leading-none"
+                style={{
+                  fontFamily: "'Nunito', Georgia, sans-serif",
+                  color: isActive
+                    ? "oklch(0.52 0.22 0)"
+                    : "oklch(0.62 0.08 330)",
+                  fontWeight: isActive ? 800 : 600,
+                }}
+              >
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 
 // ─── App Root ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [step, setStep] = useState<Step>(0);
-  const [bouquet, setBouquet] = useState<string[]>([]);
-
-  const goNext = useCallback(() => {
-    setStep((prev) => (prev < 4 ? ((prev + 1) as Step) : prev));
-  }, []);
+  const [activeTab, setActiveTab] = useState<Tab>("home");
 
   return (
-    <div className="relative min-h-screen">
-      {step === 0 && <WelcomePage onNext={goNext} />}
-      {step === 1 && (
-        <BouquetBuilder
-          onNext={goNext}
-          bouquet={bouquet}
-          setBouquet={setBouquet}
-        />
-      )}
-      {step === 2 && <ProposalMessagePage onNext={goNext} />}
-      {step === 3 && <ProposalPage onYes={goNext} />}
-      {step === 4 && <CelebrationPage bouquet={bouquet} />}
+    <div
+      className="relative min-h-screen"
+      style={{ overscrollBehavior: "none" }}
+    >
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            fontFamily: "'Nunito', Georgia, sans-serif",
+            background: "oklch(0.99 0.01 340)",
+            border: "1.5px solid oklch(0.85 0.08 330)",
+            color: "oklch(0.35 0.1 330)",
+            borderRadius: "1.5rem",
+          },
+        }}
+      />
+
+      {/* Main scrollable area */}
+      <main className="min-h-screen overflow-y-auto">
+        {activeTab === "home" && <HomeSection />}
+        {activeTab === "bouquet" && <BouquetSection />}
+        {activeTab === "letters" && <LettersSection />}
+        {activeTab === "notes" && <NotesSection />}
+        {activeTab === "certificate" && <CertificateSection />}
+      </main>
+
+      {/* Bottom navigation */}
+      <BottomNav active={activeTab} onSelect={setActiveTab} />
 
       {/* Footer */}
       <footer
-        className="fixed bottom-2 left-0 right-0 text-center text-xs z-50 pointer-events-none"
-        style={{ color: "oklch(0.7 0.08 330 / 0.7)" }}
+        className="fixed bottom-[62px] left-0 right-0 text-center text-xs z-40 pointer-events-none"
+        style={{ color: "oklch(0.7 0.08 330 / 0.6)" }}
       >
         <span className="pointer-events-auto">
           © {new Date().getFullYear()} Built with{" "}
-          <span style={{ color: "oklch(0.62 0.22 0)" }}>love</span> using{" "}
+          <span style={{ color: "oklch(0.62 0.22 0)" }}>💕</span> using{" "}
           <a
             href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(
               typeof window !== "undefined" ? window.location.hostname : "",
@@ -963,8 +1826,7 @@ export default function App() {
             style={{ color: "oklch(0.62 0.22 0)", textDecoration: "underline" }}
           >
             caffeine.ai
-          </a>{" "}
-          💕
+          </a>
         </span>
       </footer>
     </div>

@@ -9,44 +9,100 @@
 import { IDL } from '@icp-sdk/core/candid';
 
 export const Time = IDL.Int;
+export const Note = IDL.Record({
+  'id' : IDL.Nat,
+  'imageData' : IDL.Text,
+  'author' : IDL.Text,
+  'timestamp' : Time,
+  'caption' : IDL.Text,
+});
+export const Letter = IDL.Record({
+  'id' : IDL.Nat,
+  'content' : IDL.Text,
+  'author' : IDL.Text,
+  'timestamp' : Time,
+});
 export const Bouquet = IDL.Record({
   'timestamp' : Time,
   'flowers' : IDL.Vec(IDL.Text),
 });
-export const ProposalResponse = IDL.Record({
-  'timestamp' : Time,
-  'accepted' : IDL.Bool,
+export const WeddingCertificate = IDL.Record({
+  'weddingDate' : IDL.Text,
+  'bishalSigned' : IDL.Bool,
+  'bishalSignedAt' : IDL.Opt(Time),
+  'aasthaSignedAt' : IDL.Opt(Time),
+  'aasthaSigned' : IDL.Bool,
 });
 
 export const idlService = IDL.Service({
-  'getBouquet' : IDL.Func([], [Bouquet], ['query']),
-  'getProposalResponse' : IDL.Func([], [IDL.Opt(ProposalResponse)], ['query']),
-  'saveBouquet' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
-  'saveProposalResponse' : IDL.Func([IDL.Bool], [], []),
+  'addFlowersForAastha' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
+  'addFlowersForBishal' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
+  'addHandwrittenNote' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
+  'addLetter' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
+  'deleteHandwrittenNote' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'deleteLetter' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'getAllHandwrittenNotes' : IDL.Func([], [IDL.Vec(Note)], ['query']),
+  'getAllLetters' : IDL.Func([], [IDL.Vec(Letter)], ['query']),
+  'getBouquetForAastha' : IDL.Func([], [Bouquet], ['query']),
+  'getBouquetForBishal' : IDL.Func([], [Bouquet], ['query']),
+  'getWeddingCertificate' : IDL.Func([], [WeddingCertificate], ['query']),
+  'setWeddingDate' : IDL.Func([IDL.Text], [], []),
+  'signWeddingCertificateAsAastha' : IDL.Func([], [], []),
+  'signWeddingCertificateAsBishal' : IDL.Func([], [], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
   const Time = IDL.Int;
+  const Note = IDL.Record({
+    'id' : IDL.Nat,
+    'imageData' : IDL.Text,
+    'author' : IDL.Text,
+    'timestamp' : Time,
+    'caption' : IDL.Text,
+  });
+  const Letter = IDL.Record({
+    'id' : IDL.Nat,
+    'content' : IDL.Text,
+    'author' : IDL.Text,
+    'timestamp' : Time,
+  });
   const Bouquet = IDL.Record({
     'timestamp' : Time,
     'flowers' : IDL.Vec(IDL.Text),
   });
-  const ProposalResponse = IDL.Record({
-    'timestamp' : Time,
-    'accepted' : IDL.Bool,
+  const WeddingCertificate = IDL.Record({
+    'weddingDate' : IDL.Text,
+    'bishalSigned' : IDL.Bool,
+    'bishalSignedAt' : IDL.Opt(Time),
+    'aasthaSignedAt' : IDL.Opt(Time),
+    'aasthaSigned' : IDL.Bool,
   });
   
   return IDL.Service({
-    'getBouquet' : IDL.Func([], [Bouquet], ['query']),
-    'getProposalResponse' : IDL.Func(
+    'addFlowersForAastha' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
+    'addFlowersForBishal' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
+    'addHandwrittenNote' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Nat],
         [],
-        [IDL.Opt(ProposalResponse)],
-        ['query'],
       ),
-    'saveBouquet' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
-    'saveProposalResponse' : IDL.Func([IDL.Bool], [], []),
+    'addLetter' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
+    'deleteHandwrittenNote' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'deleteLetter' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'getAllHandwrittenNotes' : IDL.Func([], [IDL.Vec(Note)], ['query']),
+    'getAllLetters' : IDL.Func([], [IDL.Vec(Letter)], ['query']),
+    'getBouquetForAastha' : IDL.Func([], [Bouquet], ['query']),
+    'getBouquetForBishal' : IDL.Func([], [Bouquet], ['query']),
+    'getWeddingCertificate' : IDL.Func([], [WeddingCertificate], ['query']),
+    'setWeddingDate' : IDL.Func([IDL.Text], [], []),
+    'signWeddingCertificateAsAastha' : IDL.Func([], [], []),
+    'signWeddingCertificateAsBishal' : IDL.Func([], [], []),
   });
 };
 

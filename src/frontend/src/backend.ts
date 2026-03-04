@@ -93,79 +93,269 @@ export interface Bouquet {
     timestamp: Time;
     flowers: Array<string>;
 }
-export type Time = bigint;
-export interface ProposalResponse {
+export interface Letter {
+    id: bigint;
+    content: string;
+    author: string;
     timestamp: Time;
-    accepted: boolean;
+}
+export type Time = bigint;
+export interface WeddingCertificate {
+    weddingDate: string;
+    bishalSigned: boolean;
+    bishalSignedAt?: Time;
+    aasthaSignedAt?: Time;
+    aasthaSigned: boolean;
+}
+export interface Note {
+    id: bigint;
+    imageData: string;
+    author: string;
+    timestamp: Time;
+    caption: string;
 }
 export interface backendInterface {
-    getBouquet(): Promise<Bouquet>;
-    getProposalResponse(): Promise<ProposalResponse | null>;
-    saveBouquet(flowers: Array<string>): Promise<void>;
-    saveProposalResponse(accepted: boolean): Promise<void>;
+    addFlowersForAastha(flowers: Array<string>): Promise<void>;
+    addFlowersForBishal(flowers: Array<string>): Promise<void>;
+    addHandwrittenNote(author: string, imageData: string, caption: string): Promise<bigint>;
+    addLetter(author: string, content: string): Promise<bigint>;
+    deleteHandwrittenNote(id: bigint): Promise<boolean>;
+    deleteLetter(id: bigint): Promise<boolean>;
+    getAllHandwrittenNotes(): Promise<Array<Note>>;
+    getAllLetters(): Promise<Array<Letter>>;
+    getBouquetForAastha(): Promise<Bouquet>;
+    getBouquetForBishal(): Promise<Bouquet>;
+    getWeddingCertificate(): Promise<WeddingCertificate>;
+    setWeddingDate(date: string): Promise<void>;
+    signWeddingCertificateAsAastha(): Promise<void>;
+    signWeddingCertificateAsBishal(): Promise<void>;
 }
-import type { ProposalResponse as _ProposalResponse } from "./declarations/backend.did.d.ts";
+import type { Time as _Time, WeddingCertificate as _WeddingCertificate } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
-    async getBouquet(): Promise<Bouquet> {
+    async addFlowersForAastha(arg0: Array<string>): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.getBouquet();
+                const result = await this.actor.addFlowersForAastha(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getBouquet();
+            const result = await this.actor.addFlowersForAastha(arg0);
             return result;
         }
     }
-    async getProposalResponse(): Promise<ProposalResponse | null> {
+    async addFlowersForBishal(arg0: Array<string>): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.getProposalResponse();
-                return from_candid_opt_n1(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getProposalResponse();
-            return from_candid_opt_n1(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async saveBouquet(arg0: Array<string>): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.saveBouquet(arg0);
+                const result = await this.actor.addFlowersForBishal(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveBouquet(arg0);
+            const result = await this.actor.addFlowersForBishal(arg0);
             return result;
         }
     }
-    async saveProposalResponse(arg0: boolean): Promise<void> {
+    async addHandwrittenNote(arg0: string, arg1: string, arg2: string): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.saveProposalResponse(arg0);
+                const result = await this.actor.addHandwrittenNote(arg0, arg1, arg2);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveProposalResponse(arg0);
+            const result = await this.actor.addHandwrittenNote(arg0, arg1, arg2);
+            return result;
+        }
+    }
+    async addLetter(arg0: string, arg1: string): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addLetter(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addLetter(arg0, arg1);
+            return result;
+        }
+    }
+    async deleteHandwrittenNote(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteHandwrittenNote(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteHandwrittenNote(arg0);
+            return result;
+        }
+    }
+    async deleteLetter(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteLetter(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteLetter(arg0);
+            return result;
+        }
+    }
+    async getAllHandwrittenNotes(): Promise<Array<Note>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllHandwrittenNotes();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllHandwrittenNotes();
+            return result;
+        }
+    }
+    async getAllLetters(): Promise<Array<Letter>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllLetters();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllLetters();
+            return result;
+        }
+    }
+    async getBouquetForAastha(): Promise<Bouquet> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getBouquetForAastha();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getBouquetForAastha();
+            return result;
+        }
+    }
+    async getBouquetForBishal(): Promise<Bouquet> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getBouquetForBishal();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getBouquetForBishal();
+            return result;
+        }
+    }
+    async getWeddingCertificate(): Promise<WeddingCertificate> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getWeddingCertificate();
+                return from_candid_WeddingCertificate_n1(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getWeddingCertificate();
+            return from_candid_WeddingCertificate_n1(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async setWeddingDate(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setWeddingDate(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setWeddingDate(arg0);
+            return result;
+        }
+    }
+    async signWeddingCertificateAsAastha(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.signWeddingCertificateAsAastha();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.signWeddingCertificateAsAastha();
+            return result;
+        }
+    }
+    async signWeddingCertificateAsBishal(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.signWeddingCertificateAsBishal();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.signWeddingCertificateAsBishal();
             return result;
         }
     }
 }
-function from_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ProposalResponse]): ProposalResponse | null {
+function from_candid_WeddingCertificate_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _WeddingCertificate): WeddingCertificate {
+    return from_candid_record_n2(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Time]): Time | null {
     return value.length === 0 ? null : value[0];
+}
+function from_candid_record_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    weddingDate: string;
+    bishalSigned: boolean;
+    bishalSignedAt: [] | [_Time];
+    aasthaSignedAt: [] | [_Time];
+    aasthaSigned: boolean;
+}): {
+    weddingDate: string;
+    bishalSigned: boolean;
+    bishalSignedAt?: Time;
+    aasthaSignedAt?: Time;
+    aasthaSigned: boolean;
+} {
+    return {
+        weddingDate: value.weddingDate,
+        bishalSigned: value.bishalSigned,
+        bishalSignedAt: record_opt_to_undefined(from_candid_opt_n3(_uploadFile, _downloadFile, value.bishalSignedAt)),
+        aasthaSignedAt: record_opt_to_undefined(from_candid_opt_n3(_uploadFile, _downloadFile, value.aasthaSignedAt)),
+        aasthaSigned: value.aasthaSigned
+    };
 }
 export interface CreateActorOptions {
     agent?: Agent;

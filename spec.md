@@ -1,31 +1,41 @@
-# Pookie Proposal
+# Bishal & Aastha
 
 ## Current State
-New project. No existing code.
+Single-page proposal app with:
+- Welcome page
+- Bouquet builder (save to backend)
+- Proposal love letter
+- Proposal yes/no page (save response to backend)
+- Celebration page
+
+Backend stores: bouquet (flowers list), proposal response (bool).
 
 ## Requested Changes (Diff)
 
 ### Add
-- A romantic "pookie-themed" proposal website with cute emojis throughout
-- Landing/welcome page with a sweet animated intro message for his girlfriend
-- Interactive bouquet builder: user picks flowers/elements (roses, sunflowers, tulips, daisies, etc.) represented by cute emojis, can arrange them into a virtual bouquet
-- A proposal moment page: reveals a heartfelt proposal message with animated hearts and cute elements
-- A "Yes / No" response interaction where the "No" button playfully runs away or shrinks, and "Yes" triggers a celebration animation (confetti, hearts, sparkles)
-- Cute pookie-themed aesthetic throughout (soft pinks, purples, hearts, stars, sparkles emojis)
-- Sweet background music toggle option (optional, emoji-based)
-- Bouquet is saveable/displayable with a summary of chosen flowers
+- **Relationship timer**: Displays time together since May 21, 2025, counting years, months, days, hours, minutes, seconds live on screen.
+- **Bouquet Builder**: Keep existing but enhance — both Bishal and Aastha can each build and save their own bouquet (two separate bouquets).
+- **Letters section**: Both users can write typed love letters to each other and read the other person's letters. Letters have author, content, timestamp.
+- **Handwritten notes section**: Both users can draw/write on a canvas and save as a PNG-encoded handwritten note. Notes displayed as images with author and timestamp.
+- **Wedding Certificate / Legal Agreement page**: A decorative "wedding certificate" page showing both names (Bishal Dey & Aastha Sarkar), date of union, fields for signature/input. Certificate is styled ornately as a Gen-Z cartoonistic love certificate. Has an "I Do" button for each person to digitally sign.
+- **Navigation**: Tab/section navigation between: Home (timer), Bouquet, Letters, Notes, Certificate.
+- **Theme**: Gen-Z cartoonistic love theme — bubbly fonts, playful pastel gradients, cartoon hearts/stars, doodle-style borders, animated stickers.
 
 ### Modify
-N/A
+- Remove the old single-step proposal flow (welcome > bouquet > letter > yes/no > celebration). Replace with a multi-section app with persistent navigation.
+- Existing bouquet builder: now has two bouquets (Bishal's bouquet for Aastha, Aastha's bouquet for Bishal).
+- Backend: expand to store letters, handwritten notes, two bouquets, and certificate signatures.
 
 ### Remove
-N/A
+- Old linear step-by-step proposal flow (Step 0-4).
+- Old `saveProposalResponse` and single bouquet backend.
 
 ## Implementation Plan
-- Backend: Store the bouquet selections and a yes/no response flag per session
-- Backend: Methods to save bouquet, save response, and retrieve them
-- Frontend: Multi-step flow — Welcome -> Bouquet Builder -> Proposal Message -> Response Page -> Celebration
-- Frontend: Bouquet builder with emoji flower picker, add/remove flowers, live preview
-- Frontend: Proposal page with animated hearts, sweet message, Yes/No buttons with playful interaction
-- Frontend: Celebration page on Yes with confetti and hearts
-- Frontend: Pookie theme — soft pinks, lavender, warm whites, hearts and stars everywhere
+1. Generate new Motoko backend with: letters CRUD, handwritten notes CRUD, two bouquets (bishal/aastha), wedding certificate signatures.
+2. Frontend: multi-page app with nav tabs: Home, Bouquet, Letters, Notes, Certificate.
+3. Home: animated relationship timer since May 21 2025, big romantic hero section.
+4. Bouquet: two side-by-side bouquet builders (one per person), both saved to backend.
+5. Letters: text area to write letter, list of letters from both people, shown with cute card UI.
+6. Notes: HTML5 canvas drawing pad to write/draw handwritten note, save as base64 PNG, display saved notes as image cards.
+7. Certificate: ornate wedding certificate with Bishal Dey & Aastha Sarkar pre-filled, date input, "I Do" buttons for each person to sign digitally.
+8. All sections use Gen-Z cartoonistic love theme: bubbly fonts (Pacifico, Nunito), pastel gradients, animated emoji stickers, doodle borders.

@@ -1,56 +1,163 @@
 import Time "mo:core/Time";
+import Nat "mo:core/Nat";
 import Array "mo:core/Array";
-import Text "mo:core/Text";
+import Map "mo:core/Map";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
   type Bouquet = {
     flowers : [Text];
     timestamp : Time.Time;
   };
 
-  module Bouquet {
-    public func create(flowers : [Text]) : Bouquet {
-      {
-        flowers;
-        timestamp = Time.now();
-      };
-    };
-  };
-
-  type ProposalResponse = {
-    accepted : Bool;
+  type Letter = {
+    id : Nat;
+    author : Text;
+    content : Text;
     timestamp : Time.Time;
   };
 
-  module ProposalResponse {
-    public func create(accepted : Bool) : ProposalResponse {
-      {
-        accepted;
-        timestamp = Time.now();
-      };
-    };
+  type Note = {
+    id : Nat;
+    author : Text;
+    imageData : Text;
+    caption : Text;
+    timestamp : Time.Time;
   };
 
-  var currentBouquet : Bouquet = {
+  type WeddingCertificate = {
+    bishalSigned : Bool;
+    aasthaSigned : Bool;
+    bishalSignedAt : ?Time.Time;
+    aasthaSignedAt : ?Time.Time;
+    weddingDate : Text;
+  };
+
+  var bouquetForAastha : Bouquet = {
     flowers = Array.empty<Text>();
     timestamp = 0;
   };
 
-  var currentResponse : ?ProposalResponse = null;
-
-  public shared ({ caller }) func saveBouquet(flowers : [Text]) : async () {
-    currentBouquet := Bouquet.create(flowers);
+  var bouquetForBishal : Bouquet = {
+    flowers = Array.empty<Text>();
+    timestamp = 0;
   };
 
-  public shared ({ caller }) func saveProposalResponse(accepted : Bool) : async () {
-    currentResponse := ?ProposalResponse.create(accepted);
+  var nextLetterId = 1;
+  var nextNoteId = 1;
+
+  let letters = Map.empty<Nat, Letter>();
+  let notes = Map.empty<Nat, Note>();
+
+  var weddingCertificate : WeddingCertificate = {
+    bishalSigned = false;
+    aasthaSigned = false;
+    bishalSignedAt = null;
+    aasthaSignedAt = null;
+    weddingDate = "";
   };
 
-  public query ({ caller }) func getBouquet() : async Bouquet {
-    currentBouquet;
+  public shared ({ caller }) func addFlowersForAastha(flowers : [Text]) : async () {
+    bouquetForAastha := {
+      flowers;
+      timestamp = Time.now();
+    };
   };
 
-  public query ({ caller }) func getProposalResponse() : async ?ProposalResponse {
-    currentResponse;
+  public shared ({ caller }) func addFlowersForBishal(flowers : [Text]) : async () {
+    bouquetForBishal := {
+      flowers;
+      timestamp = Time.now();
+    };
+  };
+
+  public query ({ caller }) func getBouquetForAastha() : async Bouquet {
+    bouquetForAastha;
+  };
+
+  public query ({ caller }) func getBouquetForBishal() : async Bouquet {
+    bouquetForBishal;
+  };
+
+  public shared ({ caller }) func addLetter(author : Text, content : Text) : async Nat {
+    let id = nextLetterId;
+    nextLetterId += 1;
+    let letter : Letter = {
+      id;
+      author;
+      content;
+      timestamp = Time.now();
+    };
+    letters.add(id, letter);
+    id;
+  };
+
+  public query ({ caller }) func getAllLetters() : async [Letter] {
+    letters.values().toArray();
+  };
+
+  public shared ({ caller }) func deleteLetter(id : Nat) : async Bool {
+    switch (letters.get(id)) {
+      case (null) { false };
+      case (?_) {
+        letters.remove(id);
+        true;
+      };
+    };
+  };
+
+  public shared ({ caller }) func addHandwrittenNote(author : Text, imageData : Text, caption : Text) : async Nat {
+    let id = nextNoteId;
+    nextNoteId += 1;
+    let note : Note = {
+      id;
+      author;
+      imageData;
+      caption;
+      timestamp = Time.now();
+    };
+    notes.add(id, note);
+    id;
+  };
+
+  public query ({ caller }) func getAllHandwrittenNotes() : async [Note] {
+    notes.values().toArray();
+  };
+
+  public shared ({ caller }) func deleteHandwrittenNote(id : Nat) : async Bool {
+    switch (notes.get(id)) {
+      case (null) { false };
+      case (?_) {
+        notes.remove(id);
+        true;
+      };
+    };
+  };
+
+  public shared ({ caller }) func signWeddingCertificateAsBishal() : async () {
+    weddingCertificate := {
+      weddingCertificate with
+      bishalSigned = true;
+      bishalSignedAt = ?Time.now();
+    };
+  };
+
+  public shared ({ caller }) func signWeddingCertificateAsAastha() : async () {
+    weddingCertificate := {
+      weddingCertificate with
+      aasthaSigned = true;
+      aasthaSignedAt = ?Time.now();
+    };
+  };
+
+  public query ({ caller }) func getWeddingCertificate() : async WeddingCertificate {
+    weddingCertificate;
+  };
+
+  public shared ({ caller }) func setWeddingDate(date : Text) : async () {
+    weddingCertificate := {
+      weddingCertificate with weddingDate = date;
+    };
   };
 };
